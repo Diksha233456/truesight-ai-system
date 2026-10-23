@@ -1,0 +1,13 @@
+Evaluation Domain,Metric,Previous Model (Baseline Linear),Current Model (Production RF),Absolute Change,95% CI (Current Model)
+CBU5201 External (Overall N=100),Accuracy,48.0%,56.0%,+8.0 pp,"[46.2%, 65.3%]"
+CBU5201 External (Overall N=100),Balanced Accuracy,48.0%,56.0%,+8.0 pp,"[46.9%, 65.6%]"
+CBU5201 External (Overall N=100),Macro Precision,0.458,0.560,+0.102,N/A
+CBU5201 External (Overall N=100),Macro Recall,0.480,0.560,+0.080,N/A
+CBU5201 External (Overall N=100),Macro F1-Score,0.403,0.560,+0.157,"[0.467, 0.650]"
+CBU5201 External (Overall N=100),ROC-AUC,0.492,0.613,+0.121,"[0.505, 0.712]"
+CBU5201 English Subset (N=50),Accuracy,44.0%,62.0%,+18.0 pp,"[48.1%, 74.1%]"
+CBU5201 English Subset (N=50),Macro F1-Score,0.357,0.619,+0.262,"[0.472, 0.758]"
+CBU5201 Chinese Subset (N=50),Accuracy,52.0%,50.0%,-2.0 pp,"[36.6%, 63.4%]"
+CBU5201 Chinese Subset (N=50),Macro F1-Score,0.449,0.500,+0.051,"[0.359, 0.630]"
+Dolos 5-Fold GroupKFold CV (N=168),Mean Accuracy,62.5%,64.7%,+2.2 pp,+/- 8.8%
+Dolos 5-Fold GroupKFold CV (N=168),Mean Macro F1,0.618,0.640,+0.022,N/A

@@ -1,0 +1,2057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TRUSIGHT — Voice Truth Analyzer</title>
+  <meta name="description" content="TRUSIGHT AI voice analysis: upload audio or use live microphone to detect deception patterns with machine learning." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080c14;
+      --surface: #0e1422;
+      --card: #131929;
+      --border: #1e2d47;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59,130,246,0.25);
+      --green: #22c55e;
+      --green-glow: rgba(34,197,94,0.2);
+      --red: #ef4444;
+      --red-glow: rgba(239,68,68,0.2);
+      --amber: #f59e0b;
+      --purple: #8b5cf6;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --radius: 16px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 { width: 600px; height: 600px; background: rgba(59,130,246,0.08); top: -200px; left: -200px; }
+    .orb-2 { width: 500px; height: 500px; background: rgba(139,92,246,0.06); bottom: -150px; right: -150px; }
+
+    header {
+      width: 100%;
+      max-width: 960px;
+      padding: 48px 24px 0;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    .logo-dot {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    h1 {
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #fff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: var(--muted);
+      max-width: 540px;
+      margin: 0 auto 40px;
+      line-height: 1.6;
+    }
+
+    /* ─── Tab switcher ─── */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 32px;
+      width: fit-content;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .tab-btn {
+      padding: 10px 28px;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-btn.active {
+      background: var(--card);
+      color: var(--text);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
+    /* ─── Main container ─── */
+    main {
+      width: 100%;
+      max-width: 960px;
+      padding: 0 24px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeUp 0.35s ease forwards; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─────────────────────────────────────────────────
+       UPLOAD TAB (identical to original)
+    ───────────────────────────────────────────────── */
+
+    .upload-zone {
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 60px 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .upload-zone::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, var(--accent-glow) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 20px 60px rgba(59,130,246,0.15);
+    }
+
+    .upload-zone:hover::before, .upload-zone.drag-over::before { opacity: 1; }
+
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .upload-icon {
+      width: 72px; height: 72px;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 28px;
+      transition: transform 0.3s ease;
+    }
+
+    .upload-zone:hover .upload-icon { transform: scale(1.1); }
+
+    .upload-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .upload-hint { font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+
+    .upload-formats { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+
+    .format-tag {
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+    }
+
+    .file-selected {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 28px;
+      display: none;
+      align-items: center;
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    .file-selected.visible { display: flex; }
+
+    .file-icon {
+      width: 48px; height: 48px;
+      background: rgba(59,130,246,0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .file-info { flex: 1; text-align: left; min-width: 0; }
+    .file-name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-size { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+    .waveform { display: flex; align-items: center; gap: 3px; height: 32px; flex-shrink: 0; }
+
+    .bar {
+      width: 3px;
+      background: var(--accent);
+      border-radius: 3px;
+      animation: wave 1.2s ease-in-out infinite;
+      opacity: 0.7;
+    }
+
+    .bar:nth-child(1) { animation-delay: 0s; height: 40%; }
+    .bar:nth-child(2) { animation-delay: 0.1s; height: 70%; }
+    .bar:nth-child(3) { animation-delay: 0.2s; height: 100%; }
+    .bar:nth-child(4) { animation-delay: 0.3s; height: 60%; }
+    .bar:nth-child(5) { animation-delay: 0.4s; height: 80%; }
+    .bar:nth-child(6) { animation-delay: 0.2s; height: 50%; }
+    .bar:nth-child(7) { animation-delay: 0.1s; height: 90%; }
+    .bar:nth-child(8) { animation-delay: 0s; height: 40%; }
+
+    @keyframes wave {
+      0%, 100% { transform: scaleY(0.4); }
+      50% { transform: scaleY(1); }
+    }
+
+    .btn-analyze {
+      width: 100%;
+      padding: 18px;
+      margin-top: 16px;
+      background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+      border: none;
+      border-radius: var(--radius);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 32px rgba(59,130,246,0.3);
+      position: relative;
+      overflow: hidden;
+      display: none;
+    }
+
+    .btn-analyze.visible { display: block; }
+    .btn-analyze:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(59,130,246,0.4); }
+    .btn-analyze:active { transform: translateY(0); }
+    .btn-analyze:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .btn-inner { display: flex; align-items: center; justify-content: center; gap: 10px; }
+
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 36px 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    #uploadResults { display: none; animation: fadeUp 0.5s ease forwards; }
+    #uploadResults.visible { display: block; }
+
+    .verdict-card {
+      border-radius: var(--radius);
+      padding: 40px;
+      margin-bottom: 20px;
+      text-align: center;
+      border: 1px solid;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .verdict-card::before { content: ''; position: absolute; inset: 0; opacity: 0.06; }
+    .verdict-card.truthful { background: rgba(22, 197, 94, 0.05); border-color: rgba(34,197,94,0.3); box-shadow: 0 0 60px rgba(34,197,94,0.1); }
+    .verdict-card.truthful::before { background: var(--green); }
+    .verdict-card.deceptive { background: rgba(239, 68, 68, 0.05); border-color: rgba(239,68,68,0.3); box-shadow: 0 0 60px rgba(239,68,68,0.1); }
+    .verdict-card.deceptive::before { background: var(--red); }
+    .verdict-card.no-speech { background: rgba(245, 158, 11, 0.05); border-color: rgba(245,158,11,0.3); box-shadow: 0 0 60px rgba(245,158,11,0.1); }
+    .verdict-card.no-speech::before { background: var(--amber); }
+
+    .verdict-label { font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .verdict-text { font-size: clamp(36px, 8vw, 60px); font-weight: 900; letter-spacing: -2px; line-height: 1; margin-bottom: 16px; }
+    .verdict-card.truthful .verdict-text { color: var(--green); }
+    .verdict-card.deceptive .verdict-text { color: var(--red); }
+    .verdict-card.no-speech .verdict-text { color: var(--amber); }
+    .verdict-icon { font-size: 48px; margin-bottom: 16px; display: block; }
+
+    .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+    .score-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; text-align: center; }
+    .score-label { font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+
+    .gauge-wrap { position: relative; width: 140px; height: 140px; margin: 0 auto 16px; }
+    .gauge-svg { transform: rotate(-90deg); }
+    .gauge-track { fill: none; stroke: var(--border); stroke-width: 8; }
+    .gauge-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1); }
+    .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .gauge-value { font-size: 28px; font-weight: 800; line-height: 1; }
+    .gauge-unit { font-size: 11px; color: var(--muted); font-weight: 500; }
+
+    .bar-meter { margin: 16px 0; }
+    .bar-meter-track { width: 100%; height: 10px; background: var(--border); border-radius: 10px; overflow: hidden; }
+    .bar-meter-fill { height: 100%; border-radius: 10px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); width: 0%; }
+    .bar-meter-value { font-size: 32px; font-weight: 800; margin-bottom: 8px; }
+
+    .explanation-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; margin-bottom: 20px; }
+
+    .section-title {
+      font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .explanation-list { display: flex; flex-direction: column; gap: 12px; list-style: none; }
+
+    .explanation-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 14px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+      font-size: 15px; line-height: 1.5; animation: fadeUp 0.4s ease forwards; opacity: 0;
+    }
+    .explanation-item:nth-child(1) { animation-delay: 0.1s; }
+    .explanation-item:nth-child(2) { animation-delay: 0.2s; }
+    .explanation-item:nth-child(3) { animation-delay: 0.3s; }
+    .explanation-item:nth-child(4) { animation-delay: 0.4s; }
+    .explanation-item:nth-child(5) { animation-delay: 0.5s; }
+
+    .explanation-bullet { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+    .btn-reset {
+      width: 100%; padding: 16px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--muted); font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px;
+    }
+    .btn-reset:hover { border-color: var(--accent); color: var(--accent); }
+
+    .processing {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 48px; text-align: center; display: none; margin-top: 16px;
+    }
+    .processing.visible { display: block; }
+
+    .processing-bars { display: flex; align-items: center; justify-content: center; gap: 5px; height: 48px; margin-bottom: 24px; }
+    .processing-bar { width: 4px; background: linear-gradient(to top, var(--accent), #818cf8); border-radius: 4px; animation: wave 1.2s ease-in-out infinite; }
+    .processing-bar:nth-child(1)  { height: 30%; animation-delay: 0s; }
+    .processing-bar:nth-child(2)  { height: 55%; animation-delay: 0.1s; }
+    .processing-bar:nth-child(3)  { height: 80%; animation-delay: 0.2s; }
+    .processing-bar:nth-child(4)  { height: 100%; animation-delay: 0.3s; }
+    .processing-bar:nth-child(5)  { height: 80%; animation-delay: 0.4s; }
+    .processing-bar:nth-child(6)  { height: 55%; animation-delay: 0.3s; }
+    .processing-bar:nth-child(7)  { height: 80%; animation-delay: 0.2s; }
+    .processing-bar:nth-child(8)  { height: 55%; animation-delay: 0.1s; }
+    .processing-bar:nth-child(9)  { height: 30%; animation-delay: 0s; }
+    .processing-bar:nth-child(10) { height: 55%; animation-delay: 0.1s; }
+    .processing-bar:nth-child(11) { height: 80%; animation-delay: 0.2s; }
+    .processing-bar:nth-child(12) { height: 100%; animation-delay: 0.3s; }
+
+    .processing-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    .processing-steps { font-size: 14px; color: var(--muted); animation: textCycle 3s infinite; }
+
+    @keyframes textCycle {
+      0%  { opacity: 1; } 45% { opacity: 1; } 50% { opacity: 0; } 95% { opacity: 0; } 100% { opacity: 1; }
+    }
+
+    .error-box {
+      background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.3); border-radius: var(--radius);
+      padding: 20px 24px; color: #fca5a5; font-size: 14px; display: none; margin-top: 16px; align-items: center; gap: 12px;
+    }
+    .error-box.visible { display: flex; }
+
+    .disclaimer {
+      background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px;
+      padding: 14px 18px; font-size: 13px; color: #fcd34d; line-height: 1.5; margin-bottom: 20px;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+
+    /* ─────────────────────────────────────────────────
+       LIVE TAB
+    ───────────────────────────────────────────────── */
+
+    .live-controls-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .duration-selector { display: flex; align-items: center; gap: 8px; }
+    .duration-selector label { font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+
+    .duration-pills { display: flex; gap: 6px; }
+
+    .duration-pill {
+      padding: 7px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .duration-pill.selected { border-color: var(--accent); background: rgba(59,130,246,0.12); color: var(--accent); }
+    .duration-pill:hover:not(.selected) { border-color: var(--border); color: var(--text); }
+
+    .live-btn-group { display: flex; gap: 10px; margin-left: auto; }
+
+    .btn-start-live {
+      padding: 12px 28px;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      border: none; border-radius: 10px;
+      color: #fff; font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: all 0.3s ease;
+      box-shadow: 0 4px 20px rgba(34,197,94,0.3);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .btn-start-live:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(34,197,94,0.4); }
+    .btn-start-live:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-stop-live {
+      padding: 12px 28px;
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.4);
+      border-radius: 10px; color: #fca5a5; font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif;
+      cursor: pointer; transition: all 0.3s ease;
+    }
+    .btn-stop-live:hover { background: rgba(239,68,68,0.18); }
+    .btn-stop-live:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Live status bar */
+    .live-status-bar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .live-status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .live-status-dot.listening { background: var(--green); box-shadow: 0 0 0 4px rgba(34,197,94,0.2); animation: pulse 1.5s infinite; }
+    .live-status-dot.processing { background: var(--amber); box-shadow: 0 0 0 4px rgba(245,158,11,0.2); animation: pulse 1s infinite; }
+
+    .live-status-text { font-size: 14px; font-weight: 600; }
+    .live-status-elapsed { font-size: 14px; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+    .live-status-segments { font-size: 14px; color: var(--muted); }
+
+    /* Countdown timer */
+    .live-countdown-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .live-countdown-label { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .live-countdown-value {
+      font-size: 22px; font-weight: 800; color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      min-width: 36px;
+    }
+
+    /* Live waveform */
+    .live-waveform-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .mic-icon-wrap {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: rgba(34,197,94,0.1);
+      border: 2px solid rgba(34,197,94,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+      transition: all 0.3s;
+    }
+    .mic-icon-wrap.active { background: rgba(34,197,94,0.15); border-color: var(--green); box-shadow: 0 0 24px rgba(34,197,94,0.25); animation: pulse 1.5s infinite; }
+    .mic-icon-wrap.processing { background: rgba(245,158,11,0.1); border-color: var(--amber); box-shadow: 0 0 24px rgba(245,158,11,0.2); }
+
+    .live-wave-bars {
+      display: flex; align-items: center; gap: 4px;
+      height: 40px; flex: 1;
+    }
+
+    .live-bar {
+      width: 4px;
+      border-radius: 4px;
+      background: var(--green);
+      transition: height 0.1s ease;
+      height: 20%;
+    }
+
+    .live-wave-label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+    /* Current prediction card */
+    .live-current-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+
+    .live-current-top {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+
+    .live-verdict-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 20px;
+      border-radius: 100px;
+      font-size: 16px; font-weight: 800;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .live-verdict-badge.truthful { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .live-verdict-badge.deceptive { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+    .live-verdict-badge.waiting { background: rgba(100,116,139,0.1); color: var(--muted); border: 1px solid var(--border); }
+    .live-verdict-badge.no-speech { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+
+    .live-seg-label { font-size: 13px; color: var(--muted); }
+
+    .live-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+    .live-metric { text-align: center; }
+    .live-metric-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .live-metric-value { font-size: 36px; font-weight: 900; line-height: 1; }
+    .live-metric-value.green { color: var(--green); }
+    .live-metric-value.red { color: var(--red); }
+    .live-metric-value.amber { color: var(--amber); }
+    .live-metric-value.muted { color: var(--muted); }
+
+    .live-explain-list { display: flex; flex-direction: column; gap: 8px; list-style: none; }
+    .live-explain-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; line-height: 1.5; }
+    .live-explain-bullet { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+
+    /* Chart */
+    .live-chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+
+    /* History table */
+    .live-history-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .live-history-header { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+
+    .history-table { width: 100%; border-collapse: collapse; }
+    .history-table th { padding: 12px 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: left; border-bottom: 1px solid var(--border); }
+    .history-table td { padding: 14px 20px; font-size: 14px; border-bottom: 1px solid rgba(30,45,71,0.5); }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tr { transition: background 0.15s; }
+    .history-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .verdict-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 700;
+    }
+    .verdict-pill.truthful { background: rgba(34,197,94,0.1); color: var(--green); }
+    .verdict-pill.deceptive { background: rgba(239,68,68,0.1); color: var(--red); }
+    .verdict-pill.no-speech { background: rgba(245,158,11,0.1); color: var(--amber); }
+
+    .no-history-msg { padding: 40px; text-align: center; color: var(--muted); font-size: 14px; }
+
+    /* Session summary */
+    .session-summary-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .session-summary-card.visible { display: block; animation: fadeUp 0.5s ease forwards; }
+
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0; }
+    .summary-stat { text-align: center; padding: 16px; background: var(--surface); border-radius: 10px; border: 1px solid var(--border); }
+    .summary-stat-value { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .summary-stat-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Export */
+    .export-bar {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+
+    .btn-export {
+      padding: 10px 20px; border-radius: 10px; border: 1px solid var(--border);
+      background: transparent; color: var(--muted); font-size: 13px; font-weight: 600;
+      font-family: 'Inter', sans-serif; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-export:hover { border-color: var(--accent); color: var(--accent); background: rgba(59,130,246,0.06); }
+
+    /* ─── Footer ─── */
+    footer { text-align: center; padding: 24px; font-size: 12px; color: var(--muted); position: relative; z-index: 1; }
+
+    @media (max-width: 640px) {
+      .score-grid { grid-template-columns: 1fr; }
+      .live-metrics { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: 1fr 1fr; }
+      .upload-zone { padding: 40px 20px; }
+      .live-controls-bar { flex-direction: column; align-items: flex-start; }
+      .live-btn-group { margin-left: 0; }
+      h1 { letter-spacing: -1px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <header>
+    <div class="logo-badge"><div class="logo-dot"></div>TRUSIGHT AI</div>
+    <h1>Voice Truth Analyzer</h1>
+    <p class="subtitle">Experimental voice pattern analysis. Voice patterns alone do not prove deception.</p>
+    <div style="background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.3); border-radius: 10px; padding: 10px 16px; margin-top: 14px; max-width: 680px; font-size: 12px; color: #fde68a; line-height: 1.5; text-align: left;">
+      ⚠️ <strong>Scientific Disclaimer:</strong> This experimental model cannot determine whether a person is telling the truth. Voice patterns alone do not prove deception. Model outputs are uncalibrated and Indian-English deception detection has not been validated.
+    </div>
+  </header>
+
+  <main>
+    <!-- ─── Tab bar ─── -->
+    <div class="tab-bar">
+      <button class="tab-btn active" id="tabUploadBtn" onclick="switchTab('upload')">📁 Upload Audio</button>
+      <button class="tab-btn"        id="tabLiveBtn"   onclick="switchTab('live')">🎤 Live Microphone</button>
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         UPLOAD TAB  (original UI — completely unchanged)
+    ══════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel active" id="panelUpload">
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".wav,.mp3,.flac,.ogg,.m4a,.aac,.mpeg,.mpg" />
+        <div class="upload-icon">🎙️</div>
+        <div class="upload-title">Drop your audio file here</div>
+        <div class="upload-hint">or click anywhere to browse</div>
+        <div class="upload-formats">
+          <span class="format-tag">WAV</span>
+          <span class="format-tag">MP3</span>
+          <span class="format-tag">FLAC</span>
+          <span class="format-tag">OGG</span>
+          <span class="format-tag">M4A</span>
+          <span class="format-tag">MPEG</span>
+        </div>
+      </div>
+
+      <div class="file-selected" id="fileSelected">
+        <div class="file-icon">🎵</div>
+        <div class="file-info">
+          <div class="file-name" id="fileName">audio.wav</div>
+          <div class="file-size" id="fileSize">0 KB</div>
+        </div>
+        <div class="waveform">
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+          <div class="bar"></div><div class="bar"></div>
+        </div>
+      </div>
+
+      <button class="btn-analyze" id="analyzeBtn">
+        <div class="btn-inner">
+          <div class="spinner" id="spinner"></div>
+          <span id="btnText">🔍 Analyze Voice</span>
+        </div>
+      </button>
+
+      <div class="processing" id="processing">
+        <div class="processing-bars">
+          <div class="processing-bar"></div><div class="processing-bar"></div>
+          <div class="processing-bar"></div><div class="processing-bar"></div>
+          <div class="processing-bar"></div><div class="processing-bar"></div>
+          <div class="processing-bar"></div><div class="processing-bar"></div>
+          <div class="processing-bar"></div><div class="processing-bar"></div>
+          <div class="processing-bar"></div><div class="processing-bar"></div>
+        </div>
+        <div class="processing-title">Analyzing vocal patterns...</div>
+        <div class="processing-steps" id="processingStep">Extracting MFCC features</div>
+      </div>
+
+      <div class="error-box" id="errorBox">
+        <span>⚠️</span>
+        <span id="errorMsg">Something went wrong. Please try again.</span>
+      </div>
+
+      <div id="uploadResults">
+        <div class="divider">Analysis Result</div>
+
+        <div class="verdict-card" id="verdictCard">
+          <span class="verdict-icon" id="verdictIcon"></span>
+          <div class="verdict-label">Voice Analysis Verdict</div>
+          <div class="verdict-text" id="verdictText"></div>
+        </div>
+
+        <div class="score-grid">
+          <div class="score-card">
+            <div class="score-label">Raw Model Score</div>
+            <div class="gauge-wrap">
+              <svg class="gauge-svg" width="140" height="140" viewBox="0 0 140 140">
+                <circle class="gauge-track" cx="70" cy="70" r="56" />
+                <circle class="gauge-fill" id="gaugeFill" cx="70" cy="70" r="56"
+                  stroke-dasharray="351.86" stroke-dashoffset="351.86" />
+              </svg>
+              <div class="gauge-center">
+                <div class="gauge-value" id="gaugeValue">0%</div>
+                <div class="gauge-unit">model score</div>
+              </div>
+            </div>
+          </div>
+          <div class="score-card">
+            <div class="score-label">Uncalibrated Model Score</div>
+            <div class="bar-meter-value" id="confidenceValue">0%</div>
+            <div class="bar-meter">
+              <div class="bar-meter-track">
+                <div class="bar-meter-fill" id="confidenceFill"></div>
+              </div>
+            </div>
+            <div style="font-size:13px;color:var(--muted);margin-top:12px;line-height:1.5;" id="confidenceDesc"></div>
+          </div>
+        </div>
+
+        <div class="disclaimer">
+          <span>⚠️</span>
+          <span>This experimental model cannot determine whether a person is telling the truth. Voice patterns alone do not prove deception. Model outputs are uncalibrated and have not been validated for Indian-accented English.</span>
+        </div>
+
+        <div class="explanation-card">
+          <div class="section-title">Vocal Observations</div>
+          <ul class="explanation-list" id="explanationList"></ul>
+        </div>
+
+        <button class="btn-reset" id="resetBtn">↩ Analyze Another File</button>
+      </div>
+
+    </div><!-- /panelUpload -->
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         LIVE MICROPHONE TAB
+    ══════════════════════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="panelLive">
+
+      <!-- Controls bar -->
+      <div class="live-controls-bar">
+        <div class="duration-selector">
+          <label>Window:</label>
+          <div class="duration-pills">
+            <button class="duration-pill" id="pill15" onclick="selectDuration(15)">15s</button>
+            <button class="duration-pill" id="pill20" onclick="selectDuration(20)">20s</button>
+            <button class="duration-pill selected" id="pill30" onclick="selectDuration(30)">30s</button>
+          </div>
+        </div>
+
+        <div class="live-btn-group">
+          <button class="btn-start-live" id="btnStartLive" onclick="startLive()">🎤 Start Live Analysis</button>
+          <button class="btn-stop-live"  id="btnStopLive"  onclick="stopLive()" disabled>🛑 Stop</button>
+        </div>
+      </div>
+
+      <!-- Status bar -->
+      <div class="live-status-bar" id="liveStatusBar">
+        <div class="live-status-dot" id="liveStatusDot"></div>
+        <div class="live-status-text" id="liveStatusText">Stopped</div>
+        <div class="live-countdown-wrap" id="liveCountdownWrap" style="display:none;">
+          <span class="live-countdown-label">Next analysis in:</span>
+          <span class="live-countdown-value" id="liveCountdown">30</span>
+          <span class="live-countdown-label">s</span>
+        </div>
+        <div class="live-status-segments" id="liveStatusSegments"></div>
+        <div class="live-status-elapsed" id="liveStatusElapsed"></div>
+      </div>
+
+      <!-- Error -->
+      <div class="error-box" id="liveErrorBox" style="margin-bottom:16px;">
+        <span>⚠️</span>
+        <span id="liveErrorMsg">Live analysis error.</span>
+      </div>
+
+      <!-- Animated microphone waveform -->
+      <div class="live-waveform-card" id="liveWaveformCard">
+        <div class="mic-icon-wrap" id="micIconWrap">🎤</div>
+        <div class="live-wave-bars" id="liveWaveBars">
+          <!-- 24 bars injected by JS -->
+        </div>
+        <div class="live-wave-label" id="liveWaveLabel">Press Start to begin recording</div>
+      </div>
+
+      <!-- Current prediction card -->
+      <div class="live-current-card">
+        <div class="section-title">Current Segment Result</div>
+        <div class="live-current-top">
+          <div class="live-verdict-badge waiting" id="liveVerdictBadge">⏳ Waiting</div>
+          <div class="live-seg-label" id="liveSegLabel">—</div>
+        </div>
+        <div class="live-metrics">
+          <div class="live-metric">
+            <div class="live-metric-label">Raw Model Score</div>
+            <div class="live-metric-value muted" id="liveTruthScore">—</div>
+          </div>
+          <div class="live-metric">
+            <div class="live-metric-label">Uncalibrated Model Score</div>
+            <div class="live-metric-value muted" id="liveConfidence">—</div>
+          </div>
+        </div>
+        <div class="section-title" style="margin-bottom:12px;">Acoustic Observations</div>
+        <ul class="live-explain-list" id="liveExplainList">
+          <li class="live-explain-item" style="color:var(--muted);">
+            <span class="live-explain-bullet" style="background:rgba(100,116,139,0.1);">—</span>
+            <span>No analysis yet. Start recording to see results.</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Line chart -->
+      <div class="live-chart-card">
+        <div class="section-title">Model-Indicated Score Timeline</div>
+        <canvas id="liveChart" height="120"></canvas>
+      </div>
+
+      <!-- History table -->
+      <div class="live-history-card">
+        <div class="live-history-header">
+          <div class="section-title" style="margin-bottom:0;">Segment History</div>
+        </div>
+        <div id="liveHistoryContent">
+          <div class="no-history-msg">No segments yet. Start a live session to begin analysis.</div>
+        </div>
+      </div>
+
+      <!-- Session summary (shown after stop) -->
+      <div class="session-summary-card" id="sessionSummaryCard">
+        <div class="section-title">Session Summary</div>
+        <div class="summary-grid" id="summaryGrid"></div>
+        <div style="margin-top:16px;">
+          <div class="section-title" style="margin-bottom:10px;">Common Acoustic Indicators</div>
+          <ul class="live-explain-list" id="summaryIndicators"></ul>
+        </div>
+      </div>
+
+      <!-- Disclaimer -->
+      <div class="disclaimer">
+        <span>⚠️</span>
+        <span>This is a research prototype. Voice-only deception detection is not scientifically conclusive. Do not use these results for real-world legal or security decisions.</span>
+      </div>
+
+      <!-- Export buttons -->
+      <div class="export-bar">
+        <button class="btn-export" id="exportJsonBtn" onclick="exportJSON()">📥 Export JSON</button>
+        <button class="btn-export" id="exportCsvBtn"  onclick="exportCSV()">📊 Export CSV</button>
+        <button class="btn-export" id="exportPdfBtn"  onclick="exportPDF()">📄 Export PDF</button>
+      </div>
+
+    </div><!-- /panelLive -->
+  </main>
+
+  <footer>Built with TRUSIGHT Voice Analysis Engine &mdash; For research purposes only</footer>
+
+  <script>
+    /* ================================================================
+       TAB SWITCHING
+    ================================================================ */
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('tabUploadBtn').classList.toggle('active', tab === 'upload');
+      document.getElementById('tabLiveBtn').classList.toggle('active', tab === 'live');
+      document.getElementById('panelUpload').classList.toggle('active', tab === 'upload');
+      document.getElementById('panelLive').classList.toggle('active', tab === 'live');
+
+      if (tab === 'live' && !wsConnected) connectWS();
+    }
+
+    /* ================================================================
+       UPLOAD TAB — original logic, unchanged
+    ================================================================ */
+    const fileInput     = document.getElementById('fileInput');
+    const uploadZone    = document.getElementById('uploadZone');
+    const fileSelected  = document.getElementById('fileSelected');
+    const fileName      = document.getElementById('fileName');
+    const fileSize      = document.getElementById('fileSize');
+    const analyzeBtn    = document.getElementById('analyzeBtn');
+    const btnText       = document.getElementById('btnText');
+    const spinner       = document.getElementById('spinner');
+    const processing    = document.getElementById('processing');
+    const processingStep = document.getElementById('processingStep');
+    const uploadResults = document.getElementById('uploadResults');
+    const errorBox      = document.getElementById('errorBox');
+    const errorMsg      = document.getElementById('errorMsg');
+    const resetBtn      = document.getElementById('resetBtn');
+
+    let selectedFile = null;
+
+    uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+    uploadZone.addEventListener('drop', e => {
+      e.preventDefault();
+      uploadZone.classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f) handleFile(f);
+    });
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files[0]) handleFile(fileInput.files[0]);
+    });
+
+    function handleFile(file) {
+      selectedFile = file;
+      fileName.textContent = file.name;
+      fileSize.textContent = formatBytes(file.size);
+      fileSelected.classList.add('visible');
+      analyzeBtn.classList.add('visible');
+      uploadResults.classList.remove('visible');
+      errorBox.classList.remove('visible');
+      hideProcessing();
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(2) + ' MB';
+    }
+
+    const steps = [
+      'Extracting MFCC features...',
+      'Analyzing pitch & jitter...',
+      'Measuring speech tempo...',
+      'Computing shimmer values...',
+      'Running ML classifier...',
+      'Generating explanation...',
+    ];
+    let stepInterval;
+
+    function startProcessingAnimation() {
+      let i = 0;
+      processingStep.textContent = steps[0];
+      stepInterval = setInterval(() => {
+        i = (i + 1) % steps.length;
+        processingStep.textContent = steps[i];
+      }, 1500);
+    }
+
+    function hideProcessing() {
+      processing.classList.remove('visible');
+      clearInterval(stepInterval);
+    }
+
+    analyzeBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      analyzeBtn.disabled = true;
+      btnText.textContent = 'Analyzing...';
+      spinner.style.display = 'block';
+      processing.classList.add('visible');
+      uploadResults.classList.remove('visible');
+      errorBox.classList.remove('visible');
+      startProcessingAnimation();
+
+      try {
+        const formData = new FormData();
+        formData.append('audio', selectedFile);
+        const res = await fetch('/analyze', { method: 'POST', body: formData });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: 'Server error' }));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        hideProcessing();
+        renderUploadResults(data);
+      } catch (err) {
+        hideProcessing();
+        errorMsg.textContent = err.message || 'Failed to analyze audio. Make sure the server is running.';
+        errorBox.classList.add('visible');
+      } finally {
+        analyzeBtn.disabled = false;
+        btnText.textContent = '🔍 Analyze Voice';
+        spinner.style.display = 'none';
+      }
+    });
+
+    function renderUploadResults(data) {
+      const isNoSpeech = data.verdict === 'No Speech Detected' || data.speech_status === 'VOICE NOT DETECTED' || data.speech_detected === false;
+      const isInconclusive = data.verdict === 'Inconclusive' || data.speech_status === 'AUDIO TOO SHORT' || data.speech_status === 'AUDIO QUALITY TOO LOW';
+
+      if (isNoSpeech || isInconclusive || data.score === null || data.score === undefined) {
+        const card = document.getElementById('verdictCard');
+        card.className = 'verdict-card no-speech';
+        document.getElementById('verdictIcon').textContent = '⚠️';
+        document.getElementById('verdictText').textContent = isNoSpeech ? 'VOICE NOT DETECTED' : 'INCONCLUSIVE';
+
+        const gaugeFill = document.getElementById('gaugeFill');
+        gaugeFill.style.strokeDashoffset = 351.86;
+        document.getElementById('gaugeValue').textContent = '—';
+
+        const fill = document.getElementById('confidenceFill');
+        fill.style.width = '0%';
+        document.getElementById('confidenceValue').textContent = '—';
+        document.getElementById('confidenceDesc').textContent = isNoSpeech
+          ? 'Voice not detected. No deception score generated for silence or non-speech noise.'
+          : 'Audio too short or quality too low for acoustic analysis. Result is inconclusive.';
+
+        const list = document.getElementById('explanationList');
+        list.innerHTML = '';
+        (data.explanation || []).forEach(note => {
+          const li = document.createElement('li');
+          li.className = 'explanation-item';
+          li.innerHTML = `
+            <div class="explanation-bullet" style="background:rgba(245,158,11,0.15);color:var(--amber);">⚠️</div>
+            <span>${note}</span>`;
+          list.appendChild(li);
+        });
+
+        uploadResults.classList.add('visible');
+        uploadResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      const isDeceptive = data.verdict === 'Deceptive';
+      const score = Math.round(data.score * 100);
+      const confidence = Math.round((data.confidence ?? data.score) * 100);
+
+      const card = document.getElementById('verdictCard');
+      card.className = 'verdict-card ' + (isDeceptive ? 'deceptive' : 'truthful');
+      document.getElementById('verdictIcon').textContent = isDeceptive ? '⚠️' : 'ℹ️';
+      document.getElementById('verdictText').textContent = `MODEL OUTPUT — NOT VERIFIED (${data.verdict.toUpperCase()}-LEANING)`;
+
+      const circ = 351.86;
+      const offset = circ - (score / 100) * circ;
+      const gaugeFill = document.getElementById('gaugeFill');
+      gaugeFill.style.strokeDashoffset = circ;
+      gaugeFill.style.stroke = isDeceptive ? (score > 65 ? '#ef4444' : '#f59e0b') : '#22c55e';
+
+      setTimeout(() => {
+        gaugeFill.style.strokeDashoffset = offset;
+        document.getElementById('gaugeValue').textContent = score + '%';
+      }, 100);
+
+      const fill = document.getElementById('confidenceFill');
+      fill.style.width = '0%';
+      fill.style.background = confidence > 70
+        ? 'linear-gradient(90deg, #3b82f6, #6366f1)'
+        : 'linear-gradient(90deg, #f59e0b, #ef4444)';
+
+      setTimeout(() => {
+        fill.style.width = confidence + '%';
+        document.getElementById('confidenceValue').textContent = confidence + '%';
+      }, 150);
+
+      document.getElementById('confidenceDesc').textContent =
+        'Experimental uncalibrated model score. Voice patterns alone do not prove deception or truthfulness.';
+
+      const list = document.getElementById('explanationList');
+      list.innerHTML = '';
+      const colors = isDeceptive
+        ? ['rgba(239,68,68,0.15)', 'rgba(239,68,68,0.1)', 'rgba(239,68,68,0.08)']
+        : ['rgba(34,197,94,0.15)', 'rgba(34,197,94,0.1)', 'rgba(34,197,94,0.08)'];
+      const textColors = isDeceptive ? '#fca5a5' : '#86efac';
+
+      data.explanation.forEach((note, i) => {
+        const li = document.createElement('li');
+        li.className = 'explanation-item';
+        li.innerHTML = `
+          <div class="explanation-bullet" style="background:${colors[i % colors.length]};color:${textColors};">${i + 1}</div>
+          <span>${note}</span>`;
+        list.appendChild(li);
+      });
+
+      uploadResults.classList.add('visible');
+      uploadResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    resetBtn.addEventListener('click', () => {
+      selectedFile = null;
+      fileInput.value = '';
+      fileSelected.classList.remove('visible');
+      analyzeBtn.classList.remove('visible');
+      uploadResults.classList.remove('visible');
+      errorBox.classList.remove('visible');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    /* ================================================================
+       LIVE TAB — REAL MICROPHONE IMPLEMENTATION
+       Uses: getUserMedia → MediaRecorder → /live/analyze
+             AudioContext → AnalyserNode → real waveform visualizer
+    ================================================================ */
+
+    // ── Session state ──
+    let liveRunning        = false;
+    let selectedDuration   = 30;
+    let ws                 = null;
+    let wsConnected        = false;
+    let liveSegments       = [];
+    let liveChart          = null;
+    let sessionElapsedTimer = null;
+    let sessionStartTime   = null;
+    let countdownTimer     = null;
+    let countdownValue     = 30;
+
+    // ── Real microphone state ──
+    let mediaStream        = null;   // from getUserMedia
+    let mediaRecorder      = null;   // records segments
+    let audioContext       = null;   // Web Audio API context
+    let analyserNode       = null;   // frequency analyser
+    let waveformRAF        = null;   // requestAnimationFrame handle for visualizer
+    let recordedChunks     = [];     // MediaRecorder data accumulator
+    let segmentInProgress  = false;  // guard against double submissions
+    let currentSegmentNum  = 0;      // segment counter (reset on start)
+
+    // ── Build waveform bar elements ──
+    const waveBarsEl = document.getElementById('liveWaveBars');
+    for (let i = 0; i < 28; i++) {
+      const b = document.createElement('div');
+      b.className = 'live-bar';
+      waveBarsEl.appendChild(b);
+    }
+    const waveBars = Array.from(waveBarsEl.querySelectorAll('.live-bar'));
+
+    // ── Init Chart.js ──
+    const ctx = document.getElementById('liveChart').getContext('2d');
+    liveChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Raw Model Score',
+          data: [],
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: '#3b82f6',
+          pointBorderColor: '#0e1422',
+          pointBorderWidth: 2,
+          tension: 0.4,
+          fill: true,
+          spanGaps: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        animation: { duration: 600 },
+        scales: {
+          x: {
+            ticks: { color: '#64748b', font: { size: 11 } },
+            grid: { color: 'rgba(30,45,71,0.6)' },
+          },
+          y: {
+            min: 0, max: 1,
+            ticks: {
+              color: '#64748b', font: { size: 11 },
+              callback: v => Math.round(v * 100) + '%'
+            },
+            grid: { color: 'rgba(30,45,71,0.6)' },
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => 'Raw Model Score: ' + Math.round(ctx.raw * 100) + '%'
+            }
+          }
+        }
+      }
+    });
+
+    // ── Duration selector ──
+    function selectDuration(d) {
+      selectedDuration = d;
+      [15, 20, 30].forEach(v => {
+        document.getElementById('pill' + v).classList.toggle('selected', v === d);
+      });
+    }
+
+    // ── WebSocket (for real-time push from backend) ──
+    function connectWS() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/ws/live`);
+
+      ws.onopen = () => {
+        wsConnected = true;
+        console.log('[TRUSIGHT] WebSocket connected.');
+      };
+
+      ws.onmessage = evt => {
+        let msg;
+        try { msg = JSON.parse(evt.data); } catch { return; }
+
+        if (msg.type === 'segment_result') {
+          updateStatusBar(msg.status);
+        } else if (msg.type === 'session_stopped') {
+          updateStatusBar(msg.status);
+          if (msg.summary) renderSessionSummary(msg.summary);
+        } else if (msg.type === 'connected') {
+          updateStatusBar(msg.status);
+        }
+        // 'ping' messages are silently ignored
+      };
+
+      ws.onclose = () => {
+        wsConnected = false;
+        ws = null;
+        if (document.getElementById('panelLive').classList.contains('active')) {
+          setTimeout(connectWS, 3000);
+        }
+      };
+
+      ws.onerror = err => console.warn('[TRUSIGHT] WS error:', err);
+    }
+
+    // ================================================================
+    // START LIVE — request real microphone, start recording
+    // ================================================================
+    async function startLive() {
+      hideLiveError();
+      document.getElementById('sessionSummaryCard').classList.remove('visible');
+
+      // Verify getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showLiveError('Your browser does not support microphone access. Please use Chrome, Firefox, or Edge.');
+        return;
+      }
+
+      // Step 1: Notify backend session is starting
+      try {
+        const res = await fetch('/live/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ window_seconds: selectedDuration })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: 'Server error' }));
+          throw new Error(err.detail || `HTTP ${res.status}`);
+        }
+      } catch (err) {
+        showLiveError('Failed to start session: ' + err.message);
+        return;
+      }
+
+      // Step 2: Request REAL microphone permission
+      console.log('[TRUSIGHT] Requesting microphone permission...');
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            sampleRate: { ideal: 16000 },
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+          video: false,
+        });
+      } catch (err) {
+        // Session was registered on backend — cancel it
+        fetch('/live/stop', { method: 'POST' }).catch(() => {});
+
+        let friendlyMsg;
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          friendlyMsg = 'Microphone access was denied. Please allow microphone access in your browser settings and try again.';
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          friendlyMsg = 'No microphone was detected. Please connect a microphone and try again.';
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          friendlyMsg = 'Microphone is currently unavailable. Please close other applications using the microphone and try again.';
+        } else {
+          friendlyMsg = `Microphone error: ${err.name} — ${err.message}`;
+        }
+        showLiveError(friendlyMsg);
+        console.error('[TRUSIGHT] getUserMedia failed:', err.name, err.message);
+        return;
+      }
+
+      // Step 3: Log device info
+      const tracks = mediaStream.getAudioTracks();
+      const deviceLabel = tracks.length > 0 ? tracks[0].label : 'unknown';
+      console.log('[TRUSIGHT] Microphone permission granted');
+      console.log('[TRUSIGHT] Audio input device:', deviceLabel);
+      console.log('[TRUSIGHT] MediaStream acquired, tracks:', tracks.length);
+
+      // Step 4: Set up Web Audio for real waveform visualization
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        analyserNode = audioContext.createAnalyser();
+        analyserNode.fftSize = 64;   // 32 frequency bins — enough for 28 bars
+        analyserNode.smoothingTimeConstant = 0.75;
+        source.connect(analyserNode);
+        // Do NOT connect analyser to destination — we don't want mic playback
+      } catch (err) {
+        console.warn('[TRUSIGHT] AudioContext setup failed (waveform will be flat):', err);
+      }
+
+      // Step 5: Update UI to reflect real microphone is active
+      liveRunning = true;
+      liveSegments = [];
+      currentSegmentNum = 0;
+      sessionStartTime = Date.now();
+
+      document.getElementById('btnStartLive').disabled = true;
+      document.getElementById('btnStopLive').disabled = false;
+      document.getElementById('pill15').disabled = true;
+      document.getElementById('pill20').disabled = true;
+      document.getElementById('pill30').disabled = true;
+
+      liveChart.data.labels = [];
+      liveChart.data.datasets[0].data = [];
+      liveChart.update();
+      renderHistoryTable([]);
+      setCurrentCardWaiting();
+      setStatusListening();
+
+      // Start real waveform visualizer
+      startWaveformVisualizer();
+
+      // Start elapsed timer
+      clearInterval(sessionElapsedTimer);
+      sessionElapsedTimer = setInterval(tickElapsed, 1000);
+
+      // Step 6: Start recording the first segment
+      startNextSegment();
+    }
+
+    // ================================================================
+    // STOP LIVE — clean up microphone and all timers
+    // ================================================================
+    async function stopLive() {
+      document.getElementById('btnStopLive').disabled = true;
+      liveRunning = false;
+
+      // Stop countdown and elapsed timers
+      clearInterval(sessionElapsedTimer);
+      clearInterval(countdownTimer);
+      document.getElementById('liveCountdownWrap').style.display = 'none';
+
+      // Stop MediaRecorder (will trigger ondataavailable with final chunk)
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        // Setting segmentInProgress=false prevents the final chunk from being uploaded
+        segmentInProgress = false;
+        mediaRecorder.stop();
+        console.log('[TRUSIGHT] MediaRecorder stopped by user');
+      }
+
+      // Stop real microphone tracks — releases browser mic indicator
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => {
+          track.stop();
+          console.log('[TRUSIGHT] Microphone track stopped:', track.label);
+        });
+        mediaStream = null;
+      }
+
+      // Disconnect Web Audio graph
+      stopWaveformVisualizer();
+      if (audioContext) {
+        try { await audioContext.close(); } catch (e) { /* ignore */ }
+        audioContext = null;
+        analyserNode = null;
+      }
+
+      // Notify backend
+      try {
+        await fetch('/live/stop', { method: 'POST' });
+      } catch (err) {
+        console.warn('[TRUSIGHT] Failed to notify backend of stop:', err);
+      }
+
+      document.getElementById('btnStartLive').disabled = false;
+      document.getElementById('btnStopLive').disabled = true;
+      document.getElementById('pill15').disabled = false;
+      document.getElementById('pill20').disabled = false;
+      document.getElementById('pill30').disabled = false;
+
+      setStatusStopped();
+      setMicIdle();
+    }
+
+    // ================================================================
+    // SEGMENT RECORDING — start one N-second segment
+    // ================================================================
+    function startNextSegment() {
+      if (!liveRunning || !mediaStream) return;
+
+      recordedChunks = [];
+      segmentInProgress = true;
+      currentSegmentNum++;
+
+      // Determine the best supported MIME type
+      const mimeType = getSupportedMimeType();
+      const recOptions = mimeType ? { mimeType } : {};
+
+      try {
+        mediaRecorder = new MediaRecorder(mediaStream, recOptions);
+      } catch (err) {
+        console.error('[TRUSIGHT] MediaRecorder creation failed:', err);
+        showLiveError('Could not start recording: ' + err.message);
+        return;
+      }
+
+      mediaRecorder.ondataavailable = evt => {
+        if (evt.data && evt.data.size > 0) {
+          recordedChunks.push(evt.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        if (!segmentInProgress) {
+          // User pressed Stop mid-segment — discard this partial recording
+          console.log('[TRUSIGHT] Partial segment discarded (user stopped)');
+          return;
+        }
+        segmentInProgress = false;
+
+        const blob = new Blob(recordedChunks, { type: mimeType || 'audio/webm' });
+        recordedChunks = [];
+
+        console.log(`[TRUSIGHT] Recording stopped (segment ${currentSegmentNum})`);
+        console.log(`[TRUSIGHT] Audio blob size: ${blob.size} bytes, type: ${blob.type}`);
+
+        if (blob.size < 1000) {
+          console.warn('[TRUSIGHT] Blob is very small — may be silence or encoding issue');
+        }
+
+        // Show processing state while uploading
+        setStatusProcessing();
+
+        await uploadSegment(blob, currentSegmentNum);
+
+        // If still running, start the next segment
+        if (liveRunning) {
+          setStatusListening();
+          startNextSegment();
+        }
+      };
+
+      mediaRecorder.onerror = evt => {
+        console.error('[TRUSIGHT] MediaRecorder error:', evt.error);
+        showLiveError('Recording error: ' + (evt.error ? evt.error.message : 'unknown'));
+      };
+
+      console.log(`[TRUSIGHT] Recording started (segment ${currentSegmentNum}, window: ${selectedDuration}s, codec: ${mimeType || 'browser default'})`);
+      mediaRecorder.start();
+
+      // Start the real countdown — matches actual recording duration
+      startCountdown();
+
+      // Stop the recorder after the selected window duration
+      setTimeout(() => {
+        if (mediaRecorder && mediaRecorder.state === 'recording' && liveRunning) {
+          mediaRecorder.stop();
+        }
+      }, selectedDuration * 1000);
+    }
+
+    // ================================================================
+    // UPLOAD SEGMENT — send real audio blob to backend for analysis
+    // ================================================================
+    async function uploadSegment(blob, segNum) {
+      console.log(`[TRUSIGHT] Sending real microphone audio to backend (segment ${segNum})`);
+      console.log('[TRUSIGHT] Backend analysis started');
+
+      const ext = blob.type.includes('ogg') ? 'ogg' : 'webm';
+      const formData = new FormData();
+      formData.append('audio', blob, `live_segment_${segNum}.${ext}`);
+
+      let data;
+      try {
+        const res = await fetch('/live/analyze', { method: 'POST', body: formData });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+          throw new Error(errBody.detail || `HTTP ${res.status}`);
+        }
+        data = await res.json();
+      } catch (err) {
+        console.error('[TRUSIGHT] Backend analysis failed:', err);
+        showLiveError(`Segment ${segNum} analysis failed: ${err.message}`);
+        return;
+      }
+
+      console.log('[TRUSIGHT] Backend analysis completed');
+      console.log(`[TRUSIGHT] Real prediction received: ${data.verdict} score=${data.score} conf=${data.confidence}`);
+
+      // Build a segment object compatible with the existing UI render functions
+      const seg = {
+        segment: data.segment,
+        start: formatSegmentTime(sessionStartTime, selectedDuration, data.segment),
+        end:   formatSegmentTime(sessionStartTime, selectedDuration, data.segment, true),
+        verdict: data.verdict,
+        score: data.score,
+        confidence: data.confidence,
+        speech_detected: Boolean(data.speech_detected),
+        speech_status: data.speech_status || '',
+        explanation: data.explanation || [],
+        duration: data.duration,
+        error: null,
+      };
+
+      onSegmentResult(seg);
+    }
+
+    function formatSegmentTime(sessionStart, windowSecs, segIndex, isEnd = false) {
+      const baseOffset = (segIndex - 1) * windowSecs + (isEnd ? windowSecs : 0);
+      const mm = String(Math.floor(baseOffset / 60)).padStart(2, '0');
+      const ss = String(baseOffset % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    }
+
+    // ================================================================
+    // MIME TYPE DETECTION — pick best codec browser supports
+    // ================================================================
+    function getSupportedMimeType() {
+      const candidates = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+      ];
+      for (const type of candidates) {
+        if (MediaRecorder.isTypeSupported(type)) return type;
+      }
+      return '';  // Let the browser pick its default
+    }
+
+    // ================================================================
+    // REAL WAVEFORM VISUALIZER
+    // Reads actual microphone amplitude via AnalyserNode — NOT random values
+    // ================================================================
+    function startWaveformVisualizer() {
+      stopWaveformVisualizer();  // cancel any previous frame
+
+      const numBars = waveBars.length;
+
+      function draw() {
+        waveformRAF = requestAnimationFrame(draw);
+
+        if (!analyserNode) {
+          // No analyser — show flat idle bars
+          waveBars.forEach(b => { b.style.height = '15%'; b.style.opacity = '0.4'; });
+          return;
+        }
+
+        const bufferLength = analyserNode.frequencyBinCount;  // fftSize/2 = 32
+        const dataArray = new Uint8Array(bufferLength);
+        analyserNode.getByteFrequencyData(dataArray);
+
+        // Map 32 frequency bins to 28 bars
+        const binPerBar = bufferLength / numBars;
+        waveBars.forEach((bar, i) => {
+          // Average a slice of bins for this bar
+          const start = Math.floor(i * binPerBar);
+          const end   = Math.floor((i + 1) * binPerBar);
+          let sum = 0;
+          for (let b = start; b < end; b++) sum += dataArray[b];
+          const avg = sum / Math.max(1, end - start);
+
+          // avg is 0–255; map to 10%–95% bar height
+          const pct = 10 + (avg / 255) * 85;
+          bar.style.height = pct.toFixed(1) + '%';
+          bar.style.opacity = (0.4 + (avg / 255) * 0.6).toFixed(2);
+          // Colour: green when speaking, dimmer green when quiet
+          bar.style.background = avg > 20 ? 'var(--green)' : 'rgba(34,197,94,0.3)';
+        });
+      }
+
+      draw();
+    }
+
+    function stopWaveformVisualizer() {
+      if (waveformRAF) {
+        cancelAnimationFrame(waveformRAF);
+        waveformRAF = null;
+      }
+      // Reset bars to idle
+      waveBars.forEach(b => {
+        b.style.height = '15%';
+        b.style.opacity = '0.3';
+        b.style.background = 'var(--green)';
+      });
+    }
+
+    // ── Segment result handler ──
+    function onSegmentResult(seg) {
+      const isNoSpeech = !seg.speech_detected || seg.verdict === 'No Speech Detected' || seg.verdict === 'Waiting for speech' || seg.speech_status === 'VOICE NOT DETECTED' || seg.score === null || seg.score === undefined;
+      const isInconclusive = seg.verdict === 'Inconclusive' || seg.speech_status === 'AUDIO TOO SHORT' || seg.speech_status === 'AUDIO QUALITY TOO LOW';
+      const badge = document.getElementById('liveVerdictBadge');
+      const tv = document.getElementById('liveTruthScore');
+      const cv = document.getElementById('liveConfidence');
+      const list = document.getElementById('liveExplainList');
+
+      if (isNoSpeech || isInconclusive) {
+        // Issue 1 & 3: Do not append silence/inconclusive to segment history or chart
+        // Clear current result so old score is not mistaken for current audio
+        badge.className = 'live-verdict-badge no-speech';
+        badge.textContent = isNoSpeech ? '⚠️ VOICE NOT DETECTED' : '⚠️ Inconclusive (audio quality low / too short)';
+        document.getElementById('liveSegLabel').textContent = isNoSpeech ? 'Waiting for speech…' : 'Audio inconclusive';
+
+        tv.textContent = '—';
+        tv.className = 'live-metric-value muted';
+        cv.textContent = '—';
+        cv.className = 'live-metric-value muted';
+
+        list.innerHTML = '';
+        const note = isNoSpeech
+          ? 'Voice not detected in this window. Analysis will resume when usable speech is detected.'
+          : 'Audio was too short or quality was too low for reliable feature extraction.';
+        const li = document.createElement('li');
+        li.className = 'live-explain-item';
+        li.innerHTML = `<span class="live-explain-bullet" style="background:rgba(245,158,11,0.15);color:var(--amber);">⚠️</span><span>${note}</span>`;
+        list.appendChild(li);
+        return;
+      }
+
+      // Valid speech segment — append to history and update chart
+      liveSegments.push(seg);
+
+      const isDeceptive = seg.verdict === 'Deceptive';
+      badge.className = 'live-verdict-badge ' + (isDeceptive ? 'deceptive' : 'truthful');
+      badge.textContent = `EXPERIMENTAL MODEL OUTPUT (${isDeceptive ? 'DECEPTIVE-LEANING' : 'TRUTHFUL-LEANING'})`;
+
+      document.getElementById('liveSegLabel').textContent =
+        `Segment ${seg.segment}  •  ${seg.start} – ${seg.end}`;
+
+      const scorePct = Math.round(seg.score * 100) + '%';
+      const confPct  = Math.round((seg.confidence ?? seg.score) * 100) + '%';
+      tv.textContent = scorePct;
+      tv.className = 'live-metric-value ' + (isDeceptive ? 'red' : 'green');
+      cv.textContent = confPct;
+      cv.className = 'live-metric-value ' + (seg.confidence > 0.7 ? 'green' : 'amber');
+
+      list.innerHTML = '';
+      const colors = isDeceptive
+        ? ['rgba(239,68,68,0.15)', 'rgba(239,68,68,0.1)', 'rgba(239,68,68,0.08)']
+        : ['rgba(34,197,94,0.15)', 'rgba(34,197,94,0.1)', 'rgba(34,197,94,0.08)'];
+      const tColor = isDeceptive ? '#fca5a5' : '#86efac';
+
+      (seg.explanation || []).forEach((note, i) => {
+        const item = document.createElement('li');
+        item.className = 'live-explain-item';
+        item.innerHTML = `<span class="live-explain-bullet" style="background:${colors[i%colors.length]};color:${tColor};">${i+1}</span><span>${note}</span>`;
+        list.appendChild(item);
+      });
+
+      // Update timeline chart with raw model score
+      liveChart.data.labels.push(seg.start + '–' + seg.end);
+      liveChart.data.datasets[0].data.push(parseFloat(seg.score.toFixed(4)));
+      liveChart.update();
+
+      renderHistoryTable(liveSegments);
+      updateStatusBar({ segments_processed: liveSegments.length });
+    }
+
+    function onSessionStopped(summary) {
+      liveRunning = false;
+      clearInterval(sessionElapsedTimer);
+      clearInterval(countdownTimer);
+      document.getElementById('liveCountdownWrap').style.display = 'none';
+      document.getElementById('btnStartLive').disabled = false;
+      document.getElementById('btnStopLive').disabled = true;
+      document.getElementById('pill15').disabled = false;
+      document.getElementById('pill20').disabled = false;
+      document.getElementById('pill30').disabled = false;
+      setStatusStopped();
+      setMicIdle();
+      if (summary) {
+        renderSessionSummary(summary);
+      } else {
+        renderSessionSummary({ total_segments: 0, overall_verdict: 'No speech segments analyzed', avg_score: null, avg_confidence: null });
+      }
+    }
+
+    // ── History table ──
+    function renderHistoryTable(segs) {
+      const container = document.getElementById('liveHistoryContent');
+      if (!segs || segs.length === 0) {
+        container.innerHTML = '<div class="no-history-msg">No speech segments yet. Start speaking into your microphone.</div>';
+        return;
+      }
+      let rows = '';
+      [...segs].reverse().forEach(s => {
+        const isD = s.verdict === 'Deceptive';
+        const pillClass = isD ? 'deceptive' : 'truthful';
+        const icon = isD ? '⚠️' : 'ℹ️';
+        const scorePct = Math.round(s.score * 100);
+        const scoreText = `<span style="font-weight:700;color:${isD ? 'var(--red)' : 'var(--green)'};">${scorePct}%</span>`;
+        const confText = `${Math.round((s.confidence ?? s.score) * 100)}%`;
+        const modelLabel = `Experimental Model Output (${isD ? 'Deceptive-Leaning' : 'Truthful-Leaning'})`;
+
+        rows += `<tr>
+          <td style="font-weight:600;color:var(--muted);">#${s.segment}</td>
+          <td style="font-variant-numeric:tabular-nums;">${s.start}–${s.end}</td>
+          <td><span class="verdict-pill ${pillClass}">${icon} ${modelLabel}</span></td>
+          <td>${scoreText}</td>
+          <td style="color:var(--muted);">${confText}</td>
+        </tr>`;
+      });
+      container.innerHTML = `
+        <table class="history-table">
+          <thead><tr>
+            <th>#</th><th>Time</th><th>Experimental Model Output</th><th>Raw Model Score</th><th>Uncalibrated Model Score</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    // ── Session summary ──
+    function renderSessionSummary(s) {
+      const card = document.getElementById('sessionSummaryCard');
+      const grid = document.getElementById('summaryGrid');
+      const isNoSpeech = !s || s.total_segments === 0 || s.overall_verdict === 'No speech segments analyzed' || s.overall_verdict === 'Voice not detected' || s.overall_verdict === 'No Speech Detected' || s.avg_score === null;
+      const isD        = s && s.overall_verdict && s.overall_verdict.includes('Deceptive');
+      const verdictColor = isNoSpeech ? 'var(--amber)' : (isD ? 'var(--red)' : 'var(--green)');
+
+      let overallText = 'No speech segments analyzed';
+      if (!isNoSpeech && s && s.overall_verdict) {
+        if (s.overall_verdict.startsWith('Experimental')) {
+          overallText = s.overall_verdict;
+        } else if (s.overall_verdict === 'Deceptive') {
+          overallText = 'Experimental Model Output (Deceptive-Leaning)';
+        } else if (s.overall_verdict === 'Truthful') {
+          overallText = 'Experimental Model Output (Truthful-Leaning)';
+        } else {
+          overallText = `Experimental Model Output (${s.overall_verdict})`;
+        }
+      }
+
+      const totalSegs = (isNoSpeech || !s) ? 0 : (s.total_segments || 0);
+      const totalTime = (s && s.total_time) ? s.total_time : '00:00';
+      const avgScoreText = (isNoSpeech || !s || s.avg_score === null) ? '—' : (Math.round(s.avg_score * 100) + '%');
+      const avgConfText  = (isNoSpeech || !s || s.avg_confidence === null) ? '—' : (Math.round(s.avg_confidence * 100) + '%');
+      const highestSeg   = (!isNoSpeech && s && s.highest_risk_segment && s.highest_risk_segment.segment) ? ('Seg #' + s.highest_risk_segment.segment) : '—';
+
+      grid.innerHTML = `
+        <div class="summary-stat">
+          <div class="summary-stat-value" style="color:var(--accent);">${totalSegs}</div>
+          <div class="summary-stat-label">Speech Segments</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-value" style="color:var(--accent);">${totalTime}</div>
+          <div class="summary-stat-label">Total Time</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-value" style="color:${verdictColor};font-size:${isNoSpeech ? '18px' : '20px'};">${overallText}</div>
+          <div class="summary-stat-label">Overall Model Output</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-value" style="color:${isNoSpeech ? 'var(--muted)' : (s.avg_score < 0.5 ? 'var(--green)' : 'var(--red)')};">${avgScoreText}</div>
+          <div class="summary-stat-label">Avg Raw Model Score</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-value" style="color:var(--accent);">${avgConfText}</div>
+          <div class="summary-stat-label">Avg Uncalibrated Model Score</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-value" style="color:${isNoSpeech || highestSeg === '—' ? 'var(--muted)' : 'var(--red)'};font-size:20px;">${highestSeg}</div>
+          <div class="summary-stat-label">Highest Model Score Segment</div>
+        </div>`;
+
+      const indList = document.getElementById('summaryIndicators');
+      indList.innerHTML = '';
+      if (!isNoSpeech && s && s.common_indicators && s.common_indicators.length) {
+        s.common_indicators.forEach((note, i) => {
+          const li = document.createElement('li');
+          li.className = 'live-explain-item';
+          li.innerHTML = `<span class="live-explain-bullet" style="background:rgba(59,130,246,0.1);color:var(--accent);">${i+1}</span><span>${note}</span>`;
+          indList.appendChild(li);
+        });
+      } else {
+        const li = document.createElement('li');
+        li.className = 'live-explain-item';
+        li.style.color = 'var(--muted)';
+        li.innerHTML = `<span class="live-explain-bullet" style="background:rgba(100,116,139,0.1);">—</span><span>No speech segments analyzed. Speak into your microphone during recording to produce analysis.</span>`;
+        indList.appendChild(li);
+      }
+
+      card.classList.add('visible');
+      card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ── Status helpers ──
+    function updateStatusBar(s) {
+      if (!s) return;
+      document.getElementById('liveStatusSegments').textContent =
+        s.segments_processed > 0 ? `${s.segments_processed} segment${s.segments_processed !== 1 ? 's' : ''} processed` : '';
+    }
+
+    function setStatusListening() {
+      const dot = document.getElementById('liveStatusDot');
+      dot.className = 'live-status-dot listening';
+      document.getElementById('liveStatusText').textContent = 'Listening';
+      setMicActive();
+    }
+
+    function setStatusProcessing() {
+      const dot = document.getElementById('liveStatusDot');
+      dot.className = 'live-status-dot processing';
+      document.getElementById('liveStatusText').textContent = 'Processing…';
+      setMicProcessing();
+    }
+
+    function setStatusStopped() {
+      const dot = document.getElementById('liveStatusDot');
+      dot.className = 'live-status-dot';
+      document.getElementById('liveStatusText').textContent = 'Stopped';
+      document.getElementById('liveStatusElapsed').textContent = '';
+    }
+
+    function setMicActive() {
+      document.getElementById('micIconWrap').className = 'mic-icon-wrap active';
+      document.getElementById('liveWaveLabel').textContent = 'Recording — speak into your microphone';
+      // Remove CSS animation class — height is now driven by real analyser data
+      waveBars.forEach(b => b.classList.remove('active'));
+    }
+
+    function setMicProcessing() {
+      document.getElementById('micIconWrap').className = 'mic-icon-wrap processing';
+      document.getElementById('liveWaveLabel').textContent = 'Processing segment…';
+      waveBars.forEach(b => b.classList.remove('active'));
+    }
+
+    function setMicIdle() {
+      document.getElementById('micIconWrap').className = 'mic-icon-wrap';
+      document.getElementById('liveWaveLabel').textContent = 'Press Start to begin recording';
+      waveBars.forEach(b => { b.classList.remove('active'); b.style.height = '15%'; });
+      stopWaveformVisualizer();
+    }
+
+    function setCurrentCardWaiting() {
+      const badge = document.getElementById('liveVerdictBadge');
+      badge.className = 'live-verdict-badge waiting';
+      badge.textContent = '⏳ Waiting';
+      document.getElementById('liveSegLabel').textContent = '—';
+      document.getElementById('liveTruthScore').textContent = '—';
+      document.getElementById('liveTruthScore').className = 'live-metric-value muted';
+      document.getElementById('liveConfidence').textContent = '—';
+      document.getElementById('liveConfidence').className = 'live-metric-value muted';
+      document.getElementById('liveExplainList').innerHTML = `
+        <li class="live-explain-item" style="color:var(--muted);">
+          <span class="live-explain-bullet" style="background:rgba(100,116,139,0.1);">—</span>
+          <span>Recording in progress. Results appear after each window completes.</span>
+        </li>`;
+    }
+
+    // ── Elapsed timer ──
+    function tickElapsed() {
+      if (!sessionStartTime) return;
+      const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+      const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const ss = String(elapsed % 60).padStart(2, '0');
+      document.getElementById('liveStatusElapsed').textContent = `${mm}:${ss} elapsed`;
+    }
+
+    // ── Countdown — tied to actual MediaRecorder segment duration ──
+    function startCountdown() {
+      clearInterval(countdownTimer);
+      countdownValue = selectedDuration;
+      const wrap = document.getElementById('liveCountdownWrap');
+      const el = document.getElementById('liveCountdown');
+      wrap.style.display = 'flex';
+      el.textContent = countdownValue;
+
+      countdownTimer = setInterval(() => {
+        countdownValue--;
+        el.textContent = Math.max(0, countdownValue);
+        if (countdownValue <= 5) {
+          el.style.color = 'var(--amber)';
+        } else {
+          el.style.color = 'var(--accent)';
+        }
+        if (countdownValue <= 0) {
+          clearInterval(countdownTimer);
+          // MediaRecorder.onstop will handle the transition to next segment
+        }
+      }, 1000);
+    }
+
+    // ── Error helpers ──
+    function showLiveError(msg) {
+      const box = document.getElementById('liveErrorBox');
+      document.getElementById('liveErrorMsg').textContent = msg;
+      box.classList.add('visible');
+    }
+    function hideLiveError() {
+      document.getElementById('liveErrorBox').classList.remove('visible');
+    }
+
+    /* ================================================================
+       EXPORT
+    ================================================================ */
+    function exportJSON() {
+      if (!liveSegments.length) { showLiveError('No segments to export.'); return; }
+      const blob = new Blob([JSON.stringify({ segments: liveSegments }, null, 2)], { type: 'application/json' });
+      triggerDownload(blob, 'trusight_live_session.json');
+    }
+
+    function exportCSV() {
+      if (!liveSegments.length) { showLiveError('No segments to export.'); return; }
+      const header = 'segment,start,end,verdict,score,confidence,explanation\n';
+      const rows = liveSegments.map(s =>
+        `${s.segment},${s.start},${s.end},${s.verdict},${s.score},${s.confidence},"${(s.explanation || []).join('; ')}"` 
+      ).join('\n');
+      const blob = new Blob([header + rows], { type: 'text/csv' });
+      triggerDownload(blob, 'trusight_live_session.csv');
+    }
+
+    function exportPDF() {
+      if (!liveSegments.length) { showLiveError('No segments to export.'); return; }
+
+      const lines = [];
+      lines.push('TRUSIGHT Live Session Report');
+      lines.push('Generated: ' + new Date().toLocaleString());
+      lines.push('');
+      lines.push('Segments');
+      lines.push('--------');
+      liveSegments.forEach(s => {
+        lines.push(`#${s.segment}  ${s.start}–${s.end}  ${s.verdict}  Score:${Math.round(s.score*100)}%  Conf:${Math.round(s.confidence*100)}%`);
+        (s.explanation || []).forEach(e => lines.push('  • ' + e));
+        lines.push('');
+      });
+
+      const win = window.open('', '_blank');
+      win.document.write('<html><head><title>TRUSIGHT Report</title><style>body{font-family:monospace;padding:32px;background:#fff;color:#111;white-space:pre-wrap;}</style></head><body>');
+      win.document.write(lines.join('\n'));
+      win.document.write('</body></html>');
+      win.document.close();
+      win.focus();
+      win.print();
+    }
+
+    function triggerDownload(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

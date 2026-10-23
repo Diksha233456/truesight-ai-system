@@ -1,0 +1,63 @@
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.venv_new/
+.venv_msc/
+venv/
+env/
+*.egg-info/
+
+# Pretrained model binaries
+artifacts/*.pkl
+app/models/*.pkl
+!app/models/deception_model.pkl
+app/models/cache/
+*.bin
+*.pt
+*.onnx
+# Keep model metadata tracked in Git for versioning and checksum verification
+!artifacts/model_metadata.json
+!app/models/model_metadata.json
+
+# Uploaded/temp audio
+app/uploads/*
+!app/uploads/.gitkeep
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Env files
+.env
+.env.*
+
+# Numba JIT cache
+__pycache__/
+
+# Large datasets and archives
+datasets/
+dolos_dataset/
+extra_dataset_raw/
+reallife_dataset_raw/
+*.zip
+
+# Local audio samples and generated reports
+# sample_audio/
+reports/
+
+# Other Python-generated files
+.pytest_cache/
+.coverage
+
+# Local AI tool configuration and unrelated worktrees
+.agents/
+.kilo/
+
+# Local pretrained model copy and generated evaluation cache
+artifacts/*.pkl
+evaluation_results/cache/
+*.npz

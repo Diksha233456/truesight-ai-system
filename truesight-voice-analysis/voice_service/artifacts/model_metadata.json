@@ -1,0 +1,84 @@
+{
+  "model_name": "trusight-voice-deception",
+  "model_version": "v1.0.0",
+  "framework": "scikit-learn",
+  "framework_version": "1.9.0",
+  "architecture": "RandomForestClassifier(n_estimators=200, class_weight='balanced', random_state=42)",
+  "feature_dimension": 42,
+  "feature_names": [
+    "pitch_mean",
+    "pitch_std",
+    "pitch_min",
+    "pitch_max",
+    "jitter_local",
+    "shimmer_local",
+    "speech_tempo",
+    "pause_ratio",
+    "pause_count",
+    "silence_duration",
+    "rms_energy_mean",
+    "rms_energy_std",
+    "zero_crossing_rate",
+    "spectral_centroid",
+    "spectral_bandwidth",
+    "spectral_rolloff",
+    "mfcc_mean_0",
+    "mfcc_mean_1",
+    "mfcc_mean_2",
+    "mfcc_mean_3",
+    "mfcc_mean_4",
+    "mfcc_mean_5",
+    "mfcc_mean_6",
+    "mfcc_mean_7",
+    "mfcc_mean_8",
+    "mfcc_mean_9",
+    "mfcc_mean_10",
+    "mfcc_mean_11",
+    "mfcc_mean_12",
+    "mfcc_std_0",
+    "mfcc_std_1",
+    "mfcc_std_2",
+    "mfcc_std_3",
+    "mfcc_std_4",
+    "mfcc_std_5",
+    "mfcc_std_6",
+    "mfcc_std_7",
+    "mfcc_std_8",
+    "mfcc_std_9",
+    "mfcc_std_10",
+    "mfcc_std_11",
+    "mfcc_std_12"
+  ],
+  "classes": [
+    0,
+    1
+  ],
+  "class_names": [
+    "Truthful",
+    "Deceptive"
+  ],
+  "decision_threshold": 0.5,
+  "dataset_info": {
+    "name": "dolos_dataset",
+    "total_samples": 168,
+    "truthful_samples": 84,
+    "deceptive_samples": 84
+  },
+  "evaluation_metrics": {
+    "held_out_accuracy": 0.5882,
+    "held_out_precision": 0.5882,
+    "held_out_recall": 0.5882,
+    "held_out_f1": 0.5882,
+    "held_out_roc_auc": 0.6955,
+    "cv_accuracy_mean": 0.6431,
+    "cv_accuracy_std": 0.0755,
+    "full_dataset_accuracy": 1.0
+  },
+  "artifacts": {
+    "deception_model.pkl": {
+      "sha256": "f2ad274377a33c5511ed1e01452113f75874f912818faeea95776cdd934f0b88",
+      "size_bytes": 847481
+    }
+  },
+  "created_at": "2026-10-23T15:36:15.753637+00:00"
+}

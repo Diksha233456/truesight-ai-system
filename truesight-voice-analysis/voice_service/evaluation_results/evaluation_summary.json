@@ -1,0 +1,420 @@
+{
+  "audit_timestamp": "2026-10-21T15:34:05Z",
+  "current_production_model": {
+    "path": "app/models/deception_model.pkl",
+    "type": "RandomForestClassifier",
+    "n_estimators": 200,
+    "n_features": 42,
+    "classes": [
+      0,
+      1
+    ],
+    "class_labels": {
+      "0": "Truthful",
+      "1": "Deceptive"
+    }
+  },
+  "baseline_model": {
+    "name": "Standardized Linear Logistic Regression",
+    "pipeline": [
+      "StandardScaler",
+      "LogisticRegression(max_iter=1000)"
+    ],
+    "training_dataset": "Dolos (168 samples)"
+  },
+  "cbu5201_external_evaluation": {
+    "baseline": {
+      "sample_count": 100,
+      "accuracy": 0.48,
+      "accuracy_ci_95": [
+        0.3846,
+        0.5768
+      ],
+      "balanced_accuracy": 0.48,
+      "balanced_accuracy_ci_95": [
+        0.4043,
+        0.5474
+      ],
+      "macro_precision": 0.4584717607973422,
+      "macro_recall": 0.48,
+      "macro_f1": 0.4025735294117647,
+      "macro_f1_ci_95": [
+        0.3064,
+        0.4868
+      ],
+      "roc_auc": 0.4916,
+      "roc_auc_ci_95": [
+        0.3772,
+        0.6089
+      ],
+      "class_0_truthful": {
+        "precision": 0.4883720930232558,
+        "recall": 0.84,
+        "f1": 0.6176470588235294
+      },
+      "class_1_deceptive": {
+        "precision": 0.42857142857142855,
+        "recall": 0.12,
+        "f1": 0.1875
+      },
+      "confusion_matrix": {
+        "tn": 42,
+        "fp": 8,
+        "fn": 44,
+        "tp": 6,
+        "matrix": [
+          [
+            42,
+            8
+          ],
+          [
+            44,
+            6
+          ]
+        ]
+      },
+      "language_breakdown": {
+        "English": {
+          "sample_count": 50,
+          "accuracy": 0.44,
+          "accuracy_ci_95": [
+            0.3116,
+            0.5769
+          ],
+          "balanced_accuracy": 0.44,
+          "balanced_accuracy_ci_95": [
+            0.3446,
+            0.5323
+          ],
+          "macro_precision": 0.3754152823920266,
+          "macro_recall": 0.44,
+          "macro_f1": 0.35661764705882354,
+          "macro_f1_ci_95": [
+            0.2491,
+            0.4762
+          ],
+          "roc_auc": 0.49279999999999996,
+          "roc_auc_ci_95": [
+            0.3204,
+            0.6717
+          ],
+          "class_0_truthful": {
+            "precision": 0.46511627906976744,
+            "recall": 0.8,
+            "f1": 0.5882352941176471
+          },
+          "class_1_deceptive": {
+            "precision": 0.2857142857142857,
+            "recall": 0.08,
+            "f1": 0.125
+          },
+          "confusion_matrix": {
+            "tn": 20,
+            "fp": 5,
+            "fn": 23,
+            "tp": 2,
+            "matrix": [
+              [
+                20,
+                5
+              ],
+              [
+                23,
+                2
+              ]
+            ]
+          }
+        },
+        "Chinese": {
+          "sample_count": 50,
+          "accuracy": 0.52,
+          "accuracy_ci_95": [
+            0.3851,
+            0.652
+          ],
+          "balanced_accuracy": 0.52,
+          "balanced_accuracy_ci_95": [
+            0.423,
+            0.62
+          ],
+          "macro_precision": 0.5415282392026578,
+          "macro_recall": 0.52,
+          "macro_f1": 0.4485294117647059,
+          "macro_f1_ci_95": [
+            0.315,
+            0.5714
+          ],
+          "roc_auc": 0.48480000000000006,
+          "roc_auc_ci_95": [
+            0.3139,
+            0.6508
+          ],
+          "class_0_truthful": {
+            "precision": 0.5116279069767442,
+            "recall": 0.88,
+            "f1": 0.6470588235294118
+          },
+          "class_1_deceptive": {
+            "precision": 0.5714285714285714,
+            "recall": 0.16,
+            "f1": 0.25
+          },
+          "confusion_matrix": {
+            "tn": 22,
+            "fp": 3,
+            "fn": 21,
+            "tp": 4,
+            "matrix": [
+              [
+                22,
+                3
+              ],
+              [
+                21,
+                4
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "production": {
+      "sample_count": 100,
+      "accuracy": 0.56,
+      "accuracy_ci_95": [
+        0.4623,
+        0.6533
+      ],
+      "balanced_accuracy": 0.56,
+      "balanced_accuracy_ci_95": [
+        0.4687,
+        0.6556
+      ],
+      "macro_precision": 0.5600961538461539,
+      "macro_recall": 0.56,
+      "macro_f1": 0.5598239295718287,
+      "macro_f1_ci_95": [
+        0.4674,
+        0.65
+      ],
+      "roc_auc": 0.6126,
+      "roc_auc_ci_95": [
+        0.5048,
+        0.7123
+      ],
+      "class_0_truthful": {
+        "precision": 0.5576923076923077,
+        "recall": 0.58,
+        "f1": 0.5686274509803921
+      },
+      "class_1_deceptive": {
+        "precision": 0.5625,
+        "recall": 0.54,
+        "f1": 0.5510204081632653
+      },
+      "confusion_matrix": {
+        "tn": 29,
+        "fp": 21,
+        "fn": 23,
+        "tp": 27,
+        "matrix": [
+          [
+            29,
+            21
+          ],
+          [
+            23,
+            27
+          ]
+        ]
+      },
+      "language_breakdown": {
+        "English": {
+          "sample_count": 50,
+          "accuracy": 0.62,
+          "accuracy_ci_95": [
+            0.4815,
+            0.7414
+          ],
+          "balanced_accuracy": 0.6200000000000001,
+          "balanced_accuracy_ci_95": [
+            0.4794,
+            0.766
+          ],
+          "macro_precision": 0.6217532467532467,
+          "macro_recall": 0.6200000000000001,
+          "macro_f1": 0.6186270574066639,
+          "macro_f1_ci_95": [
+            0.4723,
+            0.7585
+          ],
+          "roc_auc": 0.6304,
+          "roc_auc_ci_95": [
+            0.4669,
+            0.7992
+          ],
+          "class_0_truthful": {
+            "precision": 0.6071428571428571,
+            "recall": 0.68,
+            "f1": 0.6415094339622641
+          },
+          "class_1_deceptive": {
+            "precision": 0.6363636363636364,
+            "recall": 0.56,
+            "f1": 0.5957446808510638
+          },
+          "confusion_matrix": {
+            "tn": 17,
+            "fp": 8,
+            "fn": 11,
+            "tp": 14,
+            "matrix": [
+              [
+                17,
+                8
+              ],
+              [
+                11,
+                14
+              ]
+            ]
+          }
+        },
+        "Chinese": {
+          "sample_count": 50,
+          "accuracy": 0.5,
+          "accuracy_ci_95": [
+            0.3664,
+            0.6336
+          ],
+          "balanced_accuracy": 0.5,
+          "balanced_accuracy_ci_95": [
+            0.3622,
+            0.6347
+          ],
+          "macro_precision": 0.5,
+          "macro_recall": 0.5,
+          "macro_f1": 0.49979991996798717,
+          "macro_f1_ci_95": [
+            0.359,
+            0.6305
+          ],
+          "roc_auc": 0.5871999999999999,
+          "roc_auc_ci_95": [
+            0.4235,
+            0.7472
+          ],
+          "class_0_truthful": {
+            "precision": 0.5,
+            "recall": 0.48,
+            "f1": 0.4897959183673469
+          },
+          "class_1_deceptive": {
+            "precision": 0.5,
+            "recall": 0.52,
+            "f1": 0.5098039215686274
+          },
+          "confusion_matrix": {
+            "tn": 12,
+            "fp": 13,
+            "fn": 12,
+            "tp": 13,
+            "matrix": [
+              [
+                12,
+                13
+              ],
+              [
+                12,
+                13
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "mcnemar_test": {
+      "model_a_correct_model_b_wrong": 15,
+      "model_a_wrong_model_b_correct": 23,
+      "chi2_statistic": 1.2895,
+      "p_value": 0.2561,
+      "significant_at_05": false
+    },
+    "difference": {
+      "accuracy_gain_percentage_points": 8.0,
+      "macro_f1_gain": 0.1573,
+      "roc_auc_gain": 0.121
+    }
+  },
+  "dolos_groupkfold_cross_validation": {
+    "n_samples": 168,
+    "n_unique_speakers": 122,
+    "baseline": {
+      "mean_accuracy": 0.6247083047357583,
+      "std_accuracy": 0.07085126029759715,
+      "mean_f1": 0.6175720551943549,
+      "fold_accuracies": [
+        0.5106382978723404,
+        0.6129032258064516,
+        0.6333333333333333,
+        0.7333333333333333,
+        0.6333333333333333
+      ]
+    },
+    "production": {
+      "mean_accuracy": 0.6471196522534889,
+      "std_accuracy": 0.08841243784403885,
+      "mean_f1": 0.6399419270100385,
+      "fold_accuracies": [
+        0.48936170212765956,
+        0.6129032258064516,
+        0.7333333333333333,
+        0.7,
+        0.7
+      ]
+    },
+    "accuracy_difference": 0.02241134751773055,
+    "t_statistic": 0.8627120152330295,
+    "p_value": 0.43695053245538995,
+    "confusion_matrix_baseline": [
+      [
+        46,
+        38
+      ],
+      [
+        27,
+        57
+      ]
+    ],
+    "confusion_matrix_production": [
+      [
+        55,
+        29
+      ],
+      [
+        33,
+        51
+      ]
+    ]
+  },
+  "indian_english_audit": {
+    "dataset_name": "Indian-Accent-Dataset Multi-Speaker",
+    "total_manifest_samples": 50,
+    "successfully_processed": 49,
+    "unique_speakers": 46,
+    "veracity_ground_truth_available": false,
+    "mean_raw_score": 0.47846938775510206,
+    "std_raw_score": 0.0862258785059042,
+    "min_raw_score": 0.31,
+    "max_raw_score": 0.63,
+    "nominal_truthful_count": 28,
+    "nominal_deceptive_count": 21,
+    "mean_duration_s": 6.223485969387755,
+    "scientific_status": "Acoustic extraction succeeds with zero errors, but veracity accuracy cannot be computed due to total absence of ground-truth truth/deception labels."
+  },
+  "reproducibility": {
+    "python_executable": "C:\\Users\\diksh\\Downloads\\voice_service\\voice_service\\.venv\\Scripts\\python.exe",
+    "random_seed": 42,
+    "command": "python training/reproducible_evaluation.py"
+  }
+}

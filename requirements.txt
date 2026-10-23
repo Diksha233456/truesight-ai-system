@@ -1,0 +1,21 @@
+# TRUSIGHT Unified Platform Dependencies
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+httpx>=0.25.0
+websockets>=12.0
+python-multipart>=0.0.20
+
+# Face Analysis Dependencies
+opencv-python>=4.8.0
+mediapipe>=0.10.0
+numpy>=1.24.0
+scipy>=1.10.0
+PyYAML>=6.0
+torch>=2.0.0
+torchvision>=0.15.0
+timm==0.9.16
+scikit-learn>=1.3.0
+pandas>=2.0.0
+matplotlib>=3.7.0
+tqdm>=4.65.0
+python-dotenv>=1.0.0

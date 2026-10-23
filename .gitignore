@@ -1,0 +1,58 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+**/*.pyc
+**/__pycache__/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Virtual Environments (do not commit virtual environments at any depth)
+.venv/
+.venv*/
+**/.venv/
+**/.venv*/
+**/venv/
+**/env/
+**/ENV/
+
+# Session and test video outputs (recordings from past runs)
+**/output/
+**/test_output/
+reports/
+**/reports/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDEs and Editors
+.vscode/
+.idea/
+.system_generated/
+.agents/
+.kilo/
+**/.agents/
+**/.kilo/
+
+# Logs
+*.log
+**/*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary audio uploads
+app/uploads/*
+!app/uploads/.gitkeep
+
+# Unit test / coverage
+.pytest_cache/
+.coverage
+htmlcov/

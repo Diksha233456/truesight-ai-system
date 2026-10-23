@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TRUSIGHT — Multimodal Forensic Intelligence Platform</title>
+  <meta name="description" content="Integrated real-time facial cue extraction and vocal acoustic deception analysis platform." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/dashboard.css" />
+</head>
+<body>
+
+<div class="dashboard-container">
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION A: HEADER BAR
+  ══════════════════════════════════════════════════════════════════ -->
+  <header class="header-bar">
+    <div class="brand-section">
+      <div class="brand-icon">👁</div>
+      <div class="brand-text">
+        <h1>TRUSIGHT INTELLIGENCE</h1>
+        <div class="brand-tagline">Multimodal Deception &amp; Credibility Forensics</div>
+      </div>
+    </div>
+
+    <div class="header-center-status">
+      <div class="system-status-badge" id="systemStatusBadge">
+        <span class="status-dot" id="systemStatusDot"></span>
+        <span id="systemStatusText">INITIALIZING SUITE...</span>
+      </div>
+      <div class="session-timer">
+        SESSION: <span id="sessionTimerVal">00:00</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <div class="engine-pill" id="faceEnginePill">
+        <span class="pill-dot"></span>
+        <span class="pill-text">FACE: CONNECTING...</span>
+      </div>
+      <div class="engine-pill" id="voiceEnginePill">
+        <span class="pill-dot"></span>
+        <span class="pill-text">VOICE: CONNECTING...</span>
+      </div>
+      <button class="btn-header" id="btnStartAll" title="Start both face and voice capture">▶ START ALL</button>
+      <button class="btn-header" id="btnPauseAll" title="Pause live capture">⏹ PAUSE</button>
+      <button class="btn-header" id="btnResetAll" title="Reset analysis history">🔄 RESET</button>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION B: COMBINED ANALYSIS OVERVIEW (TOP PROMINENT BAR)
+  ══════════════════════════════════════════════════════════════════ -->
+  <section class="cross-modal-overview">
+    <div class="overview-header">
+      <div class="overview-title">
+        <span>⚡</span> MULTIMODAL CROSS-ANALYSIS OVERVIEW
+      </div>
+      <div class="overview-subtitle">Synchronized Independent Face &amp; Voice Forensic Readings</div>
+    </div>
+
+    <div class="overview-grid">
+      <!-- Face Modality Summary Card -->
+      <div class="overview-card">
+        <div class="overview-card-header">
+          <span>FACIAL MODALITY</span>
+          <span style="color:var(--accent-cyan);">ACTIVE TELEMETRY</span>
+        </div>
+        <div class="overview-value-row">
+          <span class="overview-verdict uncertain" id="overviewFaceVerdict">CALIBRATING</span>
+          <span class="overview-score" id="overviewFaceScore">Truth: —</span>
+        </div>
+        <div class="overview-desc" id="overviewFaceDesc">
+          Awaiting facial cue baseline from live webcam feed...
+        </div>
+      </div>
+
+      <!-- Voice Modality Summary Card -->
+      <div class="overview-card">
+        <div class="overview-card-header">
+          <span>VOICE MODALITY</span>
+          <span style="color:#818CF8;">ACOUSTIC MODEL</span>
+        </div>
+        <div class="overview-value-row">
+          <span class="overview-verdict uncertain" id="overviewVoiceVerdict">STANDBY</span>
+          <span class="overview-score" id="overviewVoiceScore">Deception: —</span>
+        </div>
+        <div class="overview-desc" id="overviewVoiceDesc">
+          Record microphone audio or upload file to generate acoustic deception score...
+        </div>
+      </div>
+
+      <!-- Cross-Modal Forensic Correlation -->
+      <div class="correlation-box">
+        <div class="correlation-title">Forensic Cross-Modal Assessment</div>
+        <div class="correlation-text" id="overviewCorrelationText">
+          System initializing. Position face in front of webcam and speak into microphone to begin concurrent multimodal analysis.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION C: MAIN ANALYSIS WORKSPACE (DUAL-COLUMN GRID)
+  ══════════════════════════════════════════════════════════════════ -->
+  <main class="workspace-grid">
+
+    <!-- ────────────────────────────────────────────────────────────────
+         COLUMN 1: FACE ANALYSIS TERMINAL
+    ──────────────────────────────────────────────────────────────── -->
+    <div class="module-column">
+      
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <span class="panel-title">Face Analysis Module</span>
+          <span class="panel-tag">CV2 / MEDIAPIPE / PYTORCH</span>
+        </div>
+        <span class="panel-tag" id="faceActiveTag">WEBCAM ACTIVE</span>
+      </div>
+
+      <div class="panel-body">
+        
+        <!-- Live Webcam Viewport with Overlays -->
+        <div class="webcam-viewport">
+          <img
+            id="webcamFeed"
+            class="webcam-feed-img"
+            src="/api/face/video_feed"
+            alt="Live Facial Cue Extraction Video Feed"
+          />
+
+          <!-- Tactical HUD Overlays -->
+          <div class="hud-corner tl"></div>
+          <div class="hud-corner tr"></div>
+          <div class="hud-corner bl"></div>
+          <div class="hud-corner br"></div>
+
+          <div class="hud-badge-tl">
+            <span class="hud-rec-dot"></span>
+            <span id="hudFaceId">ID: 01</span>
+          </div>
+
+          <div class="hud-badge-tr">
+            <span id="hudFps">30.0 FPS</span>
+          </div>
+        </div>
+
+        <!-- Camera Toolbar -->
+        <div class="webcam-controls-bar">
+          <div style="display:flex;gap:8px;">
+            <button class="btn-tactical active-stop" id="btnToggleCamera">🛑 Stop Camera</button>
+            <button class="btn-tactical" id="btnSnapshot">📸 Snapshot</button>
+          </div>
+          <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">Webcam: DirectShow (Index 0)</span>
+        </div>
+
+        <!-- Face Telemetry Grid -->
+        <div class="face-metrics-grid">
+          <!-- Truth Score -->
+          <div class="metric-card">
+            <div class="metric-label">Truth Score</div>
+            <div class="metric-value-row">
+              <span class="metric-value" id="faceTruthScoreVal">—</span>
+              <span class="metric-badge uncertain" id="faceVerdictBadge">WAITING</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill uncertain" id="faceTruthMeterFill"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
+              <span>Lie Probability:</span>
+              <span id="faceLieProbVal" style="color:var(--text-secondary);">—</span>
+            </div>
+          </div>
+
+          <!-- Sentiment / Emotion -->
+          <div class="metric-card">
+            <div class="metric-label">Sentiment / Emotion</div>
+            <div class="metric-value-row">
+              <span class="metric-value" id="faceSentimentBadge">NEUTRAL</span>
+              <span class="metric-badge" id="faceSentimentVal" style="background:var(--bg-subtle);color:var(--text-secondary);">—</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill" id="faceSentimentFill" style="background:var(--accent-cyan);width:50%;"></div>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);">
+              AffectNet 8-class facial expression network
+            </div>
+          </div>
+        </div>
+
+        <!-- Head Pose 3D Orientation -->
+        <div class="metric-card">
+          <div class="metric-label">Head Pose 3D Orientation (PnP Solver)</div>
+          <div class="head-pose-grid" style="margin-top:6px;">
+            <div class="pose-subcard">
+              <div class="pose-label">Pitch</div>
+              <div class="pose-val" id="posePitch">0.0°</div>
+            </div>
+            <div class="pose-subcard">
+              <div class="pose-label">Yaw</div>
+              <div class="pose-val" id="poseYaw">0.0°</div>
+            </div>
+            <div class="pose-subcard">
+              <div class="pose-label">Roll</div>
+              <div class="pose-val" id="poseRoll">0.0°</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Units (FACS) Intensity Bars -->
+        <div class="au-card">
+          <div class="metric-label" style="display:flex;justify-content:space-between;">
+            <span>Action Units Intensity (FACS)</span>
+            <span style="font-size:10px;color:var(--text-muted);">MediaPipe Blendshapes</span>
+          </div>
+          <div class="au-grid">
+            <div class="au-item">
+              <div class="au-label-row"><span>AU01 Inner Brow</span><span id="au01_val">0.00</span></div>
+              <div class="au-bar-track"><div class="au-bar-fill" id="au01_fill"></div></div>
+            </div>
+            <div class="au-item">
+              <div class="au-label-row"><span>AU02 Outer Brow</span><span id="au02_val">0.00</span></div>
+              <div class="au-bar-track"><div class="au-bar-fill" id="au02_fill"></div></div>
+            </div>
+            <div class="au-item">
+              <div class="au-label-row"><span>AU04 Brow Lower</span><span id="au04_val">0.00</span></div>
+              <div class="au-bar-track"><div class="au-bar-fill" id="au04_fill"></div></div>
+            </div>
+            <div class="au-item">
+              <div class="au-label-row"><span>AU12 Lip Corner</span><span id="au12_val">0.00</span></div>
+              <div class="au-bar-track"><div class="au-bar-fill" id="au12_fill"></div></div>
+            </div>
+            <div class="au-item">
+              <div class="au-label-row"><span>AU15 Lip Depressor</span><span id="au15_val">0.00</span></div>
+              <div class="au-bar-track"><div class="au-bar-fill" id="au15_fill"></div></div>
+            </div>
+            <div class="au-item">
+              <div class="au-label-row"><span>AU25 Lips Part</span><span id="au25_val">0.00</span></div>
+              <div class="au-bar-track"><div class="au-bar-fill" id="au25_fill"></div></div>
+            </div>
+            <div class="au-item">
+              <div class="au-label-row"><span>AU26 Jaw Drop</span><span id="au26_val">0.00</span></div>
+              <div class="au-bar-track"><div class="au-bar-fill" id="au26_fill"></div></div>
+            </div>
+            <div class="au-item">
+              <div class="au-label-row"><span>AU45 Blink</span><span id="au45_val">0.00</span></div>
+              <div class="au-bar-track"><div class="au-bar-fill" id="au45_fill"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deception Indicators / Reasons -->
+        <div class="metric-card">
+          <div class="metric-label">Facial Deception Cues (52-Feature Forest)</div>
+          <ul class="reasons-list" id="faceReasonsList">
+            <li class="reason-item" style="color:var(--text-muted);">Calibrating facial cues baseline...</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ────────────────────────────────────────────────────────────────
+         COLUMN 2: VOICE ANALYSIS TERMINAL
+    ──────────────────────────────────────────────────────────────── -->
+    <div class="module-column">
+      
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <span class="panel-title">Voice Analysis Module</span>
+          <span class="panel-tag">ACOUSTIC ML v1.0.0</span>
+        </div>
+        <span class="panel-tag" id="voiceStatusPillTag">RANDOM FOREST</span>
+      </div>
+
+      <div class="panel-body">
+
+        <!-- Mode Selector Tabs -->
+        <div class="voice-mode-tabs">
+          <button class="voice-tab-btn active" id="tabVoiceLive">🎤 Live Microphone</button>
+          <button class="voice-tab-btn" id="tabVoiceUpload">📁 Audio File Upload</button>
+        </div>
+
+        <!-- Live Microphone Mode Pane -->
+        <div class="tab-pane active" id="paneVoiceLive">
+          <div class="live-controls-row">
+            <div class="window-pills">
+              <label>Window:</label>
+              <button class="win-pill" data-sec="15">15s</button>
+              <button class="win-pill" data-sec="20">20s</button>
+              <button class="win-pill selected" data-sec="30">30s</button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-voice-live start" id="btnStartVoiceLive">🎤 Start Recording</button>
+              <button class="btn-voice-live stop" id="btnStopVoiceLive" style="display:none;">🛑 Stop Recording</button>
+            </div>
+          </div>
+
+          <!-- Real-time Waveform Canvas -->
+          <div class="waveform-box">
+            <div class="waveform-header">
+              <span>Live Microphone Spectrum</span>
+              <span class="live-countdown-text" id="liveCountdownVal">Ready to record</span>
+            </div>
+            <canvas id="waveformCanvas" width="480" height="56"></canvas>
+          </div>
+        </div>
+
+        <!-- Audio File Upload Mode Pane -->
+        <div class="tab-pane" id="paneVoiceUpload">
+          <div class="dropzone" id="voiceDropzone">
+            <div class="dropzone-icon">🎙️</div>
+            <div class="dropzone-title">Drag &amp; drop audio file, or click to browse</div>
+            <div class="dropzone-hint">Supports WAV, FLAC, MP3, OGG, WEBM (up to 25 MB)</div>
+            <input type="file" id="voiceFileInput" accept=".wav,.flac,.mp3,.ogg,.m4a,.webm" style="display:none;" />
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div id="uploadFilename" style="font-size:12px;color:var(--text-secondary);font-family:var(--font-mono);">No file selected</div>
+            <button class="btn-tactical" id="btnAnalyzeFile" disabled style="padding:8px 16px;">⚡ Analyze Audio File</button>
+          </div>
+        </div>
+
+        <!-- Voice Scores Grid: Deception Score & Model Confidence -->
+        <div class="voice-scores-grid">
+          
+          <!-- Deception Score (Strictly Renamed from Raw Model Score!) -->
+          <div class="score-card-gauge">
+            <div class="radial-gauge-wrap">
+              <svg class="gauge-svg" width="72" height="72" viewBox="0 0 72 72">
+                <circle class="gauge-bg" cx="36" cy="36" r="30" />
+                <circle class="gauge-progress" id="voiceDeceptionGauge" cx="36" cy="36" r="30" />
+              </svg>
+              <div class="gauge-value-text" id="voiceDeceptionScoreVal">—</div>
+            </div>
+            <div class="score-meta">
+              <span class="score-title-text">Deception Score</span>
+              <span class="score-sublabel">Original Model Probability</span>
+              <span class="metric-badge" id="voiceVerdictPill" style="margin-top:4px;display:inline-block;width:fit-content;">STANDBY</span>
+            </div>
+          </div>
+
+          <!-- Model Confidence -->
+          <div class="metric-card">
+            <div class="metric-label">Model Confidence</div>
+            <div class="metric-value-row">
+              <span class="metric-value" id="voiceConfidenceVal">—</span>
+              <span class="metric-badge" id="voiceSpeechStatusBadge">STANDBY</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill" id="voiceConfidenceFill" style="background:#818CF8;"></div>
+            </div>
+            <div style="font-size:11px;color:var(--text-muted);">
+              Uncalibrated ensemble decision surface
+            </div>
+          </div>
+        </div>
+
+        <!-- ────────────────────────────────────────────────────────────
+             ACOUSTIC OBSERVATIONS PANEL (CRITICAL REQUIREMENT)
+        ──────────────────────────────────────────────────────────── -->
+        <div class="observations-panel">
+          <div class="observations-header">
+            <div class="observations-title">
+              <span>📊</span> EXTRACTED ACOUSTIC OBSERVATIONS
+            </div>
+            <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">Parselmouth / Librosa</span>
+          </div>
+
+          <!-- Structured Characteristic Chips -->
+          <div class="acoustic-chips-grid">
+            <!-- Pitch Variations -->
+            <div class="acoustic-chip">
+              <span class="chip-label">Pitch (F0) Variations</span>
+              <span class="chip-value" id="obsF0">Normative</span>
+              <span class="chip-desc" id="obsF0Desc">Conversational frequency baseline</span>
+            </div>
+
+            <!-- Speech Rate -->
+            <div class="acoustic-chip">
+              <span class="chip-label">Speech Rate &amp; Tempo</span>
+              <span class="chip-value" id="obsTempo">Standard</span>
+              <span class="chip-desc" id="obsTempoDesc">Pacing &amp; onset articulation</span>
+            </div>
+
+            <!-- Pauses & Hesitation -->
+            <div class="acoustic-chip">
+              <span class="chip-label">Pauses &amp; Hesitation</span>
+              <span class="chip-value" id="obsPauses">Moderate</span>
+              <span class="chip-desc" id="obsPausesDesc">Silent intervals &amp; phrasing</span>
+            </div>
+
+            <!-- Vocal Stability -->
+            <div class="acoustic-chip">
+              <span class="chip-label">Vocal Stability (Jitter/Shimmer)</span>
+              <span class="chip-value" id="obsStability">Stable</span>
+              <span class="chip-desc" id="obsStabilityDesc">Cycle-to-cycle periodicity</span>
+            </div>
+          </div>
+
+          <!-- Structured Explanation List -->
+          <div style="margin-top:6px;">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">
+              Measured Evidence Breakdown
+            </div>
+            <ul class="structured-obs-list" id="structuredObsList">
+              <li class="structured-obs-item">Awaiting audio input for acoustic cue extraction...</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Timeline Chart -->
+        <div class="history-card">
+          <div class="history-header">Deception Score Timeline</div>
+          <div style="height:120px;position:relative;">
+            <canvas id="voiceTimelineChart"></canvas>
+          </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="history-card">
+          <div class="history-header">Segment Analysis Log</div>
+          <div class="history-table-wrap">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Seg</th>
+                  <th>Time</th>
+                  <th>Verdict</th>
+                  <th>Deception Score</th>
+                  <th>Confidence</th>
+                  <th>Voice Detected</th>
+                </tr>
+              </thead>
+              <tbody id="voiceHistoryTableBody">
+                <tr>
+                  <td colspan="6" style="text-align:center;color:var(--text-muted);padding:14px;">No segments recorded yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECTION D: SCIENTIFIC DISCLAIMER FOOTER
+  ══════════════════════════════════════════════════════════════════ -->
+  <footer class="disclaimer-bar">
+    <span class="disclaimer-icon">⚠️</span>
+    <span>
+      <strong>FORENSIC NOTICE:</strong> TRUSIGHT is an experimental multimodal investigative intelligence research suite. Voice deception scores and facial cue readings represent statistical model estimates and physiological acoustic measurements. They do not constitute standalone proof of truth or deceit. Indian-accented English and cross-cultural prosody naturally introduce variance in acoustic metrics.
+    </span>
+  </footer>
+
+</div>
+
+<!-- Scripts -->
+<script src="/static/js/face_module.js"></script>
+<script src="/static/js/voice_module.js"></script>
+<script src="/static/js/dashboard.js"></script>
+</body>
+</html>
