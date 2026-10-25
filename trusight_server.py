@@ -24,12 +24,14 @@ STATIC_DIR = BASE_DIR / "static"
 
 VOICE_BACKEND = os.getenv("VOICE_BACKEND", "http://127.0.0.1:8001").rstrip("/")
 FACE_BACKEND = os.getenv("FACE_BACKEND", "http://127.0.0.1:8002").rstrip("/")
+GEMINI_BACKEND = os.getenv("GEMINI_BACKEND", "http://127.0.0.1:8003").rstrip("/")
 VOICE_WS = VOICE_BACKEND.replace("http://", "ws://").replace("https://", "wss://")
+GEMINI_WS = GEMINI_BACKEND.replace("http://", "ws://").replace("https://", "wss://")
 
 app = FastAPI(
     title="TRUSIGHT Multimodal Intelligence Gateway",
-    description="Unified localhost gateway for Face and Voice forensic analysis.",
-    version="1.0.0",
+    description="Unified localhost gateway for Face, Voice, and Gemini Evidence forensic analysis.",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -54,9 +56,10 @@ async def serve_index():
 
 @app.get("/api/health")
 async def health_check():
-    """Aggregated health check querying both backend engines."""
+    """Aggregated health check querying Face, Voice, and Gemini engines."""
     voice_health = {"status": "unreachable", "model_loaded": False}
     face_health = {"status": "unreachable", "camera_running": False}
+    gemini_health = {"status": "unreachable", "service": "Gemini RAG Engine"}
 
     async with httpx.AsyncClient(timeout=2.0) as client:
         try:
@@ -73,11 +76,23 @@ async def health_check():
         except Exception:
             pass
 
+        try:
+            res_gemini = await client.get(f"{GEMINI_BACKEND}/")
+            if res_gemini.status_code == 200:
+                gemini_health = res_gemini.json()
+        except Exception:
+            pass
+
     return {
         "gateway": "online",
         "voice_engine": voice_health,
         "face_engine": face_health,
-        "unified": voice_health.get("status") == "running" and face_health.get("status") == "ok",
+        "gemini_engine": gemini_health,
+        "unified": (
+            voice_health.get("status") == "running"
+            and face_health.get("status") == "ok"
+            and gemini_health.get("status") == "running"
+        ),
     }
 
 
@@ -206,6 +221,102 @@ async def voice_websocket_proxy(websocket: WebSocket):
             pass
 
 
+# ── Gemini Evidence & RAG Engine Endpoints ───────────────────────────────
+
+@app.post("/api/gemini/case")
+async def gemini_case_upload(request: Request):
+    """Proxy multipart/form-data PDF upload to Gemini RAG engine."""
+    url = f"{GEMINI_BACKEND}/case"
+    body = await request.body()
+    headers = dict(request.headers)
+    headers.pop("host", None)
+    headers.pop("content-length", None)
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        try:
+            res = await client.post(url, content=body, headers=headers)
+            return Response(
+                content=res.content,
+                status_code=res.status_code,
+                media_type=res.headers.get("content-type", "application/json"),
+            )
+        except httpx.RequestError as exc:
+            return JSONResponse(status_code=503, content={"detail": f"Gemini RAG Engine unavailable: {exc}"})
+
+
+@app.get("/api/gemini/{path:path}")
+async def gemini_proxy_get(path: str, request: Request):
+    """Proxy GET requests to Gemini Engine."""
+    url = f"{GEMINI_BACKEND}/{path}"
+    query = request.url.query
+    if query:
+        url += f"?{query}"
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            res = await client.get(url)
+            return Response(content=res.content, status_code=res.status_code, media_type=res.headers.get("content-type"))
+        except httpx.RequestError as exc:
+            return JSONResponse(status_code=503, content={"detail": f"Gemini Engine unavailable: {exc}"})
+
+
+@app.post("/api/gemini/{path:path}")
+async def gemini_proxy_post(path: str, request: Request):
+    """Proxy POST requests to Gemini Engine."""
+    url = f"{GEMINI_BACKEND}/{path}"
+    query = request.url.query
+    if query:
+        url += f"?{query}"
+    body = await request.body()
+    headers = dict(request.headers)
+    headers.pop("host", None)
+    headers.pop("content-length", None)
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        try:
+            res = await client.post(url, content=body, headers=headers)
+            return Response(content=res.content, status_code=res.status_code, media_type=res.headers.get("content-type"))
+        except httpx.RequestError as exc:
+            return JSONResponse(status_code=503, content={"detail": f"Gemini Engine unavailable: {exc}"})
+
+
+@app.websocket("/ws/gemini/audio/{case_id}")
+async def gemini_audio_websocket_proxy(websocket: WebSocket, case_id: str):
+    """Proxy binary PCM audio and JSON analysis between browser and Gemini Engine."""
+    import websockets
+    await websocket.accept()
+    target_url = f"{GEMINI_WS}/ws/audio/{case_id}"
+    try:
+        async with websockets.connect(target_url, max_size=10 * 1024 * 1024) as backend_ws:
+            async def forward_to_client():
+                try:
+                    while True:
+                        msg = await backend_ws.recv()
+                        if isinstance(msg, bytes):
+                            await websocket.send_bytes(msg)
+                        else:
+                            await websocket.send_text(msg)
+                except Exception:
+                    pass
+
+            async def forward_to_backend():
+                try:
+                    while True:
+                        data = await websocket.receive()
+                        if "bytes" in data and data["bytes"]:
+                            await backend_ws.send(data["bytes"])
+                        elif "text" in data and data["text"]:
+                            await backend_ws.send(data["text"])
+                except Exception:
+                    pass
+
+            await asyncio.gather(forward_to_client(), forward_to_backend(), return_exceptions=True)
+    except WebSocketDisconnect:
+        pass
+    except Exception as exc:
+        try:
+            await websocket.close(code=1011, reason=f"Gemini WebSocket proxy error: {exc}")
+        except Exception:
+            pass
+
+
 def main():
     import uvicorn
     port = int(os.getenv("PORT", os.getenv("TRUSIGHT_PORT", "8000")))
@@ -213,8 +324,9 @@ def main():
     print(f"\n=======================================================")
     print(f"  TRUSIGHT UNIFIED GATEWAY STARTING")
     print(f"  Dashboard: http://localhost:{port}")
-    print(f"  Voice Engine Target: {VOICE_BACKEND}")
-    print(f"  Face Engine Target : {FACE_BACKEND}")
+    print(f"  Voice Engine Target : {VOICE_BACKEND}")
+    print(f"  Face Engine Target  : {FACE_BACKEND}")
+    print(f"  Gemini Engine Target: {GEMINI_BACKEND}")
     print(f"=======================================================\n")
     uvicorn.run("trusight_server:app", host=host, port=port, reload=False)
 

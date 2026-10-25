@@ -91,7 +91,7 @@ class FaceAnalysisModule {
 
   startPolling() {
     this.fetchTelemetry();
-    this.pollInterval = setInterval(() => this.fetchTelemetry(), 250);
+    this.pollInterval = setInterval(() => this.fetchTelemetry(), 350);
   }
 
   stopPolling() {
@@ -102,6 +102,8 @@ class FaceAnalysisModule {
   }
 
   async fetchTelemetry() {
+    if (this._isFetching) return;
+    this._isFetching = true;
     try {
       const res = await fetch('/api/face/live');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -110,6 +112,8 @@ class FaceAnalysisModule {
     } catch (err) {
       // Backend may be momentarily busy or restarting
       this.updateCameraStatus(false);
+    } finally {
+      this._isFetching = false;
     }
   }
 

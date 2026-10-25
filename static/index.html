@@ -46,6 +46,10 @@
         <span class="pill-dot"></span>
         <span class="pill-text">VOICE: CONNECTING...</span>
       </div>
+      <div class="engine-pill" id="geminiEnginePill">
+        <span class="pill-dot"></span>
+        <span class="pill-text">GEMINI: CONNECTING...</span>
+      </div>
       <button class="btn-header" id="btnStartAll" title="Start both face and voice capture">▶ START ALL</button>
       <button class="btn-header" id="btnPauseAll" title="Pause live capture">⏹ PAUSE</button>
       <button class="btn-header" id="btnResetAll" title="Reset analysis history">🔄 RESET</button>
@@ -60,7 +64,7 @@
       <div class="overview-title">
         <span>⚡</span> MULTIMODAL CROSS-ANALYSIS OVERVIEW
       </div>
-      <div class="overview-subtitle">Synchronized Independent Face &amp; Voice Forensic Readings</div>
+      <div class="overview-subtitle">Synchronized Independent Face, Voice &amp; Evidence Readings</div>
     </div>
 
     <div class="overview-grid">
@@ -94,9 +98,30 @@
         </div>
       </div>
 
-      <!-- Cross-Modal Forensic Correlation -->
+      <!-- Gemini Evidence Summary Card -->
+      <div class="overview-card">
+        <div class="overview-card-header">
+          <span>EVIDENCE / GEMINI RAG</span>
+          <span style="color:#A78BFA;">STATEMENT VERIFY</span>
+        </div>
+        <div class="overview-value-row">
+          <span class="overview-verdict uncertain" id="overviewGeminiVerdict">STANDBY</span>
+          <span class="overview-score" id="overviewGeminiScore">Contradiction: —</span>
+        </div>
+        <div class="overview-desc" id="overviewGeminiDesc">
+          Upload case evidence PDF and stream live speech to assess contradiction probability...
+        </div>
+      </div>
+
+      <!-- Cross-Modal Forensic Correlation & Score -->
       <div class="correlation-box">
-        <div class="correlation-title">Forensic Cross-Modal Assessment</div>
+        <div class="correlation-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div class="correlation-title" style="margin-bottom:0;">Forensic Cross-Modal Assessment</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="overview-verdict uncertain" id="crossModalVerdictBadge" style="font-size:11px;padding:3px 10px;">UNCERTAIN</span>
+            <span class="overview-score" id="crossModalScoreVal" style="font-weight:700;font-size:14px;color:#38BDF8;">Score: —</span>
+          </div>
+        </div>
         <div class="correlation-text" id="overviewCorrelationText">
           System initializing. Position face in front of webcam and speak into microphone to begin concurrent multimodal analysis.
         </div>
@@ -290,9 +315,9 @@
           <div class="live-controls-row">
             <div class="window-pills">
               <label>Window:</label>
-              <button class="win-pill" data-sec="15">15s</button>
+              <button class="win-pill selected" data-sec="15">15s</button>
               <button class="win-pill" data-sec="20">20s</button>
-              <button class="win-pill selected" data-sec="30">30s</button>
+              <button class="win-pill" data-sec="30">30s</button>
             </div>
             <div style="display:flex;gap:8px;">
               <button class="btn-voice-live start" id="btnStartVoiceLive">🎤 Start Recording</button>
@@ -447,6 +472,88 @@
       </div>
     </div>
 
+    <!-- ────────────────────────────────────────────────────────────────
+         COLUMN 3: STATEMENT & EVIDENCE VERIFICATION (GEMINI RAG ENGINE)
+    ──────────────────────────────────────────────────────────────── -->
+    <div class="module-column">
+      
+      <div class="panel-header">
+        <div class="panel-title-wrap">
+          <span class="panel-title">Statement &amp; Evidence Engine</span>
+          <span class="panel-tag">GEMINI LIVE / FAISS RAG</span>
+        </div>
+        <span class="panel-tag" id="geminiActiveTag" style="border-color:#A78BFA;color:#C4B5FD;">EVIDENCE VERIFIER</span>
+      </div>
+
+      <div class="panel-body">
+        
+        <!-- Case Report PDF Upload -->
+        <div class="gemini-upload-box">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-secondary);letter-spacing:0.05em;">
+            1. Case Evidence File (FIR / Witness / Deposition PDF)
+          </div>
+          <div class="gemini-file-row">
+            <input type="file" id="geminiPdfInput" accept=".pdf" class="gemini-file-input" />
+            <button class="btn-tactical" id="btnGeminiUploadCase" style="white-space:nowrap;">Index Case</button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="gemini-status-text" id="geminiCaseStatus">No case report loaded. Select a PDF to index.</span>
+            <span class="gemini-status-text" id="geminiCaseInfo" style="color:var(--accent-cyan);"></span>
+          </div>
+        </div>
+
+        <!-- Live Statement Controls -->
+        <div class="webcam-controls-bar" style="margin-top:0;">
+          <div style="display:flex;gap:8px;">
+            <button class="btn-tactical active-stop" id="btnGeminiStart" disabled>🎙️ Start Interview</button>
+            <button class="btn-tactical" id="btnGeminiStop" disabled>⏹️ Stop</button>
+          </div>
+          <span class="gemini-status-text" id="geminiMicStatus" style="font-size:11px;">Awaiting case index to begin streaming</span>
+        </div>
+
+        <!-- Statement Contradiction Metric -->
+        <div class="face-metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Statement Contradiction Risk</div>
+            <div class="metric-value-row">
+              <span class="metric-value" id="geminiScoreVal">—</span>
+              <span class="metric-badge uncertain" id="geminiVerdictBadge">STANDBY</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill uncertain" id="geminiScoreFill" style="width:0%;"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">
+              <span id="geminiConfidenceVal">Confidence: —</span>
+              <span style="color:#A78BFA;">Gemini 2.5 Flash</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Verbatim Transcript Stream -->
+        <div class="history-card">
+          <div class="history-header">Live Statement Transcription (Verbatim)</div>
+          <div class="gemini-text-stream" id="geminiTranscriptBox">Waiting for speech...</div>
+        </div>
+
+        <!-- Retrieved Case Evidence Chunks -->
+        <div class="history-card">
+          <div class="history-header">Retrieved Evidence Documents</div>
+          <div style="max-height:130px;overflow-y:auto;" id="geminiEvidenceBox">
+            <div style="font-size:11px;color:var(--text-muted);padding:8px;">Awaiting statement analysis to retrieve evidence...</div>
+          </div>
+        </div>
+
+        <!-- Contradiction Explanation -->
+        <div class="history-card">
+          <div class="history-header">Gemini Forensic Contradiction Analysis</div>
+          <div class="gemini-text-stream" id="geminiExplanationBox" style="height:auto;min-height:110px;max-height:220px;font-size:11px;color:#CBD5E1;padding:8px 10px;">
+            <div style="font-size:11px;color:var(--text-muted);padding:4px;">No contradiction analysis generated yet. Speak to compare statements against indexed evidence.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </main>
 
   <!-- ══════════════════════════════════════════════════════════════════
@@ -455,7 +562,7 @@
   <footer class="disclaimer-bar">
     <span class="disclaimer-icon">⚠️</span>
     <span>
-      <strong>FORENSIC NOTICE:</strong> TRUSIGHT is an experimental multimodal investigative intelligence research suite. Voice deception scores and facial cue readings represent statistical model estimates and physiological acoustic measurements. They do not constitute standalone proof of truth or deceit. Indian-accented English and cross-cultural prosody naturally introduce variance in acoustic metrics.
+      <strong>FORENSIC NOTICE:</strong> TRUSIGHT is an experimental multimodal investigative intelligence research suite. Voice deception scores, facial cue readings, and LLM statement contradiction scores represent statistical model estimates and physiological acoustic measurements. They do not constitute standalone proof of truth or deceit.
     </span>
   </footer>
 
@@ -464,6 +571,7 @@
 <!-- Scripts -->
 <script src="/static/js/face_module.js"></script>
 <script src="/static/js/voice_module.js"></script>
+<script src="/static/js/gemini_module.js"></script>
 <script src="/static/js/dashboard.js"></script>
 </body>
 </html>

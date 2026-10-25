@@ -218,6 +218,7 @@ class PipelineOrchestrator:
         self._last_jpeg: Optional[bytes] = None
         self._last_fps: float = float(fps)
         self._last_viz_data: Dict[str, Any] = {}
+        self._jpeg_frame_id: int = 0
         logger.info(f"Pipeline running (FPS={fps}, visualize={visualize}, show_gui_window={show_gui_window})")
 
         try:
@@ -309,9 +310,10 @@ class PipelineOrchestrator:
 
                     # Encode JPEG frame for web dashboard live streaming
                     try:
-                        ret_jpeg, buf = cv2.imencode('.jpg', viz_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                        ret_jpeg, buf = cv2.imencode('.jpg', viz_frame, [cv2.IMWRITE_JPEG_QUALITY, 75, cv2.IMWRITE_JPEG_OPTIMIZE, 0])
                         if ret_jpeg:
                             self._last_jpeg = buf.tobytes()
+                            self._jpeg_frame_id += 1
                     except Exception:
                         pass
 

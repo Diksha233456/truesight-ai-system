@@ -52,7 +52,7 @@ class VoiceAnalysisModule {
     this.timelineCanvas = document.getElementById('voiceTimelineChart');
 
     // State
-    this.selectedWindow = 30; // 15, 20, 30s
+    this.selectedWindow = 15; // default 15s window per user requirement
     this.isLiveRecording = false;
     this.audioContext = null;
     this.analyser = null;

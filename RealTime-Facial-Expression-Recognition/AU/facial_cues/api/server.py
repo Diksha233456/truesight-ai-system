@@ -141,6 +141,7 @@ def _startup() -> None:
     config = load_config(None)
     config.deception.enabled = True
     config.visualization.enabled = True
+    config.output.write_per_frame = False
     pipeline = PipelineOrchestrator(config)
     pipeline.initialize()
     _worker = threading.Thread(target=_run_camera, name="facial-cues-camera", daemon=True)
@@ -187,14 +188,18 @@ def _emotion():
 def video_feed():
     """MJPEG streaming endpoint for the live webcam feed with full overlays."""
     def frame_gen():
+        last_sent_id = -1
         while True:
-            frame_bytes = getattr(pipeline, "_last_jpeg", None)
-            if frame_bytes is not None:
-                yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
-                )
-            time.sleep(0.033)  # ~30 FPS
+            current_id = getattr(pipeline, "_jpeg_frame_id", 0)
+            if current_id != last_sent_id:
+                frame_bytes = getattr(pipeline, "_last_jpeg", None)
+                if frame_bytes is not None:
+                    last_sent_id = current_id
+                    yield (
+                        b"--frame\r\n"
+                        b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+                    )
+            time.sleep(0.015)  # Responsive check without busy-waiting
     return StreamingResponse(frame_gen(), media_type="multipart/x-mixed-replace; boundary=frame")
 
 
@@ -207,9 +212,11 @@ def camera_start():
         config = load_config(None)
         config.deception.enabled = True
         config.visualization.enabled = True
+        config.output.write_per_frame = False
         pipeline = PipelineOrchestrator(config)
         pipeline.initialize()
     else:
+        pipeline.initialize()
         pipeline._is_running = True
     _worker = threading.Thread(target=_run_camera, name="facial-cues-camera", daemon=True)
     _worker.start()

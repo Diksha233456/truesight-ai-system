@@ -101,6 +101,17 @@ if _STATIC_DIR.exists():
 
 @app.on_event("startup")
 def print_startup_banner():
+    # Warm up Librosa & Numba JIT compilation in background so first live segment evaluates in <200ms
+    try:
+        import numpy as _np
+        from app.utils import LoadedAudio as _LA
+        _dummy = _np.zeros(16000, dtype=_np.float32)
+        _la = _LA(samples=_dummy, sample_rate=16000, duration_seconds=1.0, source_filename="warmup.wav")
+        feature_extractor.extract(_la)
+        logger.info("[Voice Engine] Numba JIT & feature extractor warmed up successfully.")
+    except Exception as _w_err:
+        logger.debug("[Voice Engine] Warmup note: %s", _w_err)
+
     banner = (
         "\n"
         + "=" * 65 + "\n"

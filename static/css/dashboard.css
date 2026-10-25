@@ -260,8 +260,14 @@ body {
 
 .overview-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.2fr;
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr) 1.25fr;
+  gap: 14px;
+}
+
+@media (max-width: 1400px) {
+  .overview-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 .overview-card {
@@ -339,11 +345,17 @@ body {
 
 .workspace-grid {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
-  gap: 20px;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1440px) {
+  .workspace-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 960px) {
   .workspace-grid {
     grid-template-columns: 1fr;
   }
@@ -504,9 +516,15 @@ body {
   transition: all 0.15s ease;
 }
 
-.btn-tactical:hover {
+.btn-tactical:hover:not(:disabled) {
   background: var(--border-subtle);
   border-color: var(--border-strong);
+}
+
+.btn-tactical:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
 }
 
 .btn-tactical.active-stop {
@@ -1113,6 +1131,215 @@ body {
 @keyframes pulse-glow {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.4; transform: scale(0.9); }
+}
+
+/* ── Gemini RAG Module Specific Components ────────────────────────── */
+
+.gemini-upload-box {
+  background: var(--bg-card);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gemini-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gemini-file-input {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  width: 100%;
+}
+
+.gemini-status-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.gemini-status-text.processing {
+  color: var(--accent-cyan);
+}
+
+.gemini-status-text.success {
+  color: var(--truth);
+}
+
+.gemini-status-text.error {
+  color: var(--lie);
+}
+
+.gemini-text-stream {
+  background: #090D15;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  height: 140px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.gemini-evidence-item {
+  background: var(--bg-subtle);
+  border-left: 3px solid var(--accent-indigo);
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  transition: background 0.15s ease;
+}
+
+.gemini-evidence-item:hover {
+  background: var(--bg-card-hover);
+}
+
+.evidence-tag {
+  color: var(--accent-cyan);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  margin-right: 6px;
+  background: rgba(14, 165, 233, 0.12);
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid rgba(14, 165, 233, 0.25);
+}
+
+/* ── Rich Forensic Contradiction Breakdown ─────────────────────── */
+
+.contradiction-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.contradiction-summary-card {
+  background: #090E18;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid #818CF8;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #E2E8F0;
+}
+
+.contradiction-summary-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #A5B4FC;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.conflict-list-header {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.conflict-item-card {
+  background: rgba(244, 63, 94, 0.06);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.conflict-item-card.supported {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.conflict-type-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  background: rgba(244, 63, 94, 0.18);
+  color: #FB7185;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+.conflict-type-badge.supported {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34D399;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.conflict-comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.conflict-cell {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.conflict-cell-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.conflict-cell-content {
+  color: #F1F5F9;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Custom Scrollbar */
