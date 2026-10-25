@@ -1,174 +1,193 @@
-# TRUSIGHT — Multimodal Forensic Intelligence Platform
+TRUSIGHT --- Multimodal Forensic Intelligence Platform
+An integrated AI platform for facial, voice, and text-based evidence
+analysis.
 
-> **Unified Face & Voice Deception Analysis Dashboard**  
-> Accessible on **`http://localhost:8000`** with zero external dependencies.
+TRUSIGHT is a multimodal investigative intelligence platform that brings
+together facial cue analysis, vocal acoustic analysis, and text-based
+evidence analysis through a unified dashboard. It helps users examine
+different forms of evidence in one interface, combining machine-learning
+outputs, extracted observations, and structured explanations to support
+investigative review.
+Important: TRUSIGHT is an investigative support tool, not a
+definitive lie detector. Facial expressions, vocal characteristics,
+and textual patterns can be influenced by many factors and cannot
+independently establish deception. Results should be reviewed
+alongside source evidence and appropriate validation.
 
----
+Table of Contents
+- Overview
+- Core Modules
+  - Facial Analysis
+  - Voice Analysis
+  - Text-Based Evidence Analysis
+- Unified Dashboard
+- Technology Stack
+- Project Structure
+- Local Execution
+- How TRUSIGHT Works
+- Responsible Use and Limitations
+Overview
+TRUSIGHT combines three complementary analysis modules:
+- Face Analysis: Processes webcam video to extract facial
+  landmarks, facial action cues, emotion classifications, head pose,
+  gaze information, and model-generated truth/lie predictions.
+- Voice Analysis: Examines audio recordings and live microphone
+  input using acoustic features such as pitch, jitter, shimmer,
+  pauses, speech rate, and intensity. A Random Forest model generates
+  a deception-related score.
+- Text-Based Evidence Analysis: Supports case-level review of
+  textual evidence. Depending on the configured pipeline, it can use
+  language models and retrieval-augmented generation (RAG) to examine
+  supplied material and produce structured explanations.
+The modules are accessible through a unified dashboard. Their outputs
+can be examined independently and compared as part of a broader evidence
+review.
+Core Modules
+A. Facial Analysis
+- Live webcam video processing and facial-cue visualization.
+- Facial landmark detection using MediaPipe.
+- Emotion classification using the configured facial emotion model.
+- Facial action-unit visualization and head-pose estimation.
+- Model-generated truth/lie classification and associated scores.
+- Camera start and stop controls within the dashboard.
+B. Voice Analysis
+- Live microphone recording and audio-file upload.
+- Acoustic feature extraction using Parselmouth and Librosa.
+- Pitch and fundamental-frequency statistics.
+- Jitter and shimmer measurements related to vocal stability.
+- Speech tempo, pauses, hesitation-related observations, and RMS
+  intensity.
+- Random Forest-based deception scoring.
+- Structured explanations of acoustic observations and signal-quality
+  warnings.
+C. Text-Based Evidence Analysis
+- Analysis of text supplied as investigative evidence.
+- Document-based evidence processing and case indexing, where
+  supported by the configured pipeline.
+- Retrieval-augmented generation (RAG) to retrieve relevant
+  information from indexed material.
+- Language-model-assisted analysis and structured explanations.
+- Case-oriented evidence organization to support review alongside
+  facial and voice outputs.
+The text module complements the other analysis components. Its output
+should be checked against the original source material and should not be
+treated as automatic proof that a statement is true or false.
+Unified Dashboard
+The TRUSIGHT dashboard provides a central interface for accessing the
+available analysis modules:
+- Face: Webcam feed, facial observations, and model outputs.
+- Voice: Live and uploaded audio analysis, acoustic measurements,
+  and model outputs.
+- Text: Textual evidence analysis and supported document-based
+  workflows.
+- Cross-Modal Review: Side-by-side presentation of available
+  results to help users compare observations across modalities.
+TRUSIGHT presents outputs from separate analysis pipelines. It does
+not imply a scientifically validated combined deception verdict
+unless a fusion method has been implemented and appropriately evaluated.
+Technology Stack
+  Component                           Technologies
+  Backend API                         Python, FastAPI
 
-## 1. Executive Summary
+  Frontend                            HTML, CSS, JavaScript
 
-**TRUSIGHT** is an integrated investigative intelligence platform that unifies real-time webcam facial cue extraction with vocal acoustic deception analysis inside a single, high-performance forensic dashboard.
+  Facial analysis                     OpenCV, MediaPipe, configured
+                                      deep-learning models
 
-Both underlying machine learning inference pipelines and models have been preserved with **100% mathematical and empirical fidelity**:
-- **Face Analysis Engine**: MediaPipe Tasks 478-landmark mesh, AffectNet EfficientNet-B0 sentiment emotion classifier, and 52-facial-cue neural deception model.
-- **Voice Analysis Engine**: 200-tree acoustic Random Forest deception model, Parselmouth glottal acoustics (F0 fundamental frequency, Jitter, Shimmer), and librosa temporal/spectral feature extractors.
-- **Unified Gateway**: Single localhost dashboard (`http://localhost:8000`) reverse-proxying live MJPEG video streams, REST telemetry, and bidirectional WebSockets.
+  Voice analysis                      Parselmouth, Librosa, scikit-learn
 
----
+  Text analysis                       Configured language-model clients,
+                                      retrieval-augmented generation
+                                      (RAG)
 
-## 2. Architecture Overview
+  Data processing                     Acoustic feature extraction,
+                                      facial-cue extraction, document and
+                                      text processing
 
-```
-                                      ┌──────────────────────────────────────────────────┐
-                                      │            BROWSER (SINGLE PAGE UI)              │
-                                      │           http://localhost:8000                  │
-                                      └────────────────────────┬─────────────────────────┘
-                                                               │
-                                                               ▼
-                                      ┌──────────────────────────────────────────────────┐
-                                      │          TRUSIGHT GATEWAY (FastAPI :8000)        │
-                                      │          trusight_server.py / static/            │
-                                      └──────────────┬───────────────────┬───────────────┘
-                                                     │                   │
-                     Reverse Proxy / Video Feed / REST│                   │ Reverse Proxy / WebSocket / Uploads
-                                                     ▼                   ▼
-     ┌──────────────────────────────────────────────────┐     ┌──────────────────────────────────────────────────┐
-     │          FACE ANALYSIS ENGINE (:8002)            │     │          VOICE ANALYSIS ENGINE (:8001)           │
-     │      RealTime-Facial-Expression-Recognition      │     │            truesight-voice-analysis              │
-     │                                                  │     │                                                  │
-     │  - OpenCV DirectShow Video Source (:8002/video)  │     │  - Parselmouth (Pitch F0, Jitter, Shimmer)       │
-     │  - MediaPipe FaceLandmarker (478 landmarks)      │     │  - Librosa (Tempo, Pauses, RMS Intensity)        │
-     │  - AffectNet EfficientNet Emotion CNN            │     │  - 200-Tree Random Forest Deception Model (v1.0) │
-     │  - 52-Facial-Cue Truth/Lie MLP Classifier        │     │  - Live Audio Buffer & WebM/WAV Decoder          │
-     │  - Dynamic BBox, Landmarker & AU Visualizer      │     │  - Structured Acoustic Evidence Generator        │
-     └──────────────────────────────────────────────────┘     └──────────────────────────────────────────────────┘
-```
+  Communication                       REST APIs, WebSockets, live video
+                                      streaming
 
----
-
-## 3. Preserved Modules & Presentation Alignments
-
-### A. Face Analysis Module (Preserved & Integrated)
-- **Zero Calculation Changes**: Model weights (`enet_b0_8_best_vgaf.pt`, `deception_mlp.pth`, `face_landmarker.task`), feature windows, and inference thresholds remain untouched.
-- **Embedded Live Webcam**: Video feed rendered directly inside the dashboard viewport via high-frame-rate MJPEG streaming (`/api/face/video_feed`).
-- **All Native Overlays Preserved**:
-  - Truth Score badge (`TRUTH`, `LIE`, or `UNCERTAIN`).
-  - Sentiment emotion label with confidence (Neutral, Happy, Anger, etc.).
-  - 478 MediaPipe facial landmarks and bounding box with Face ID.
-  - 3D Head Pose orientation axes (Pitch, Yaw, Roll) via PnP solver.
-  - Iris gaze direction vectors.
-  - Action Units (FACS) intensity bars (AU01, AU02, AU04, AU12, AU15, AU25, AU26, AU45).
-- **In-Browser Camera Lifecycle**: Ability to cleanly start and stop webcam hardware directly from the dashboard controls.
-
-### B. Voice Analysis Module (Presentation Upgrades)
-- **Renamed `Raw Model Score` → `Deception Score`**:
-  - Throughout the entire dashboard, the metric formerly labeled `Raw Model Score` is now presented as **`Deception Score`**.
-  - **No underlying calculations were modified**: The numeric score (e.g. `0.4050` / `40.5%`) is displayed with exact mathematical accuracy.
-- **Direct Display of Acoustic Observations**:
-  Extracted physical measurements generated by the model are displayed directly in dedicated telemetry cards:
-  - **Pitch Variations (F0)**: Fundamental frequency mean & standard deviation in Hz, intonational range.
-  - **Speech Rate & Tempo**: Syllable onset rate per second and articulation pacing.
-  - **Pauses & Hesitation**: Silent interval ratio (%), pause count, and total pause duration.
-  - **Vocal Stability**: Local Jitter (% frequency wobble) and Local Shimmer (% amplitude perturbation).
-  - **Voice Intensity**: Root-mean-square (RMS) energy mean and standard deviation.
-  - **Structured Evidence Breakdown**: Bullet-point explanations detailing physical acoustic findings and diagnostic quality warnings.
-- **Dual Input Modes**:
-  - **Live Microphone**: In-browser MediaRecorder with window selection (`15s`, `20s`, `30s`), countdown timer, and real-time Web Audio API waveform spectrum visualizer.
-  - **Audio File Upload**: Drag-and-drop analysis supporting WAV, FLAC, MP3, OGG, M4A, and WEBM.
-
-### C. Combined Analysis Overview (Top Banner)
-- Brings Face and Voice outputs side-by-side in a unified tactical overview bar.
-- Shows Face verdict/truth score alongside Voice verdict/deception score.
-- **No Artificial Fusion**: Adheres strictly to scientific integrity by presenting independent empirical model outputs and correlation notes without inventing arbitrary combined scores.
-
----
-
-## 4. How to Run Locally
-
-### Quick Start (One Command)
-
-From the project root (`c:\Users\likit\Projects\Trusight`):
-
-```bat
-.\run_trusight.bat
-```
-
-Or run directly with Python:
-
-```bash
-python trusight_launcher.py
-```
-
-### What Happens Automatically:
-1. Verifies ports `8000`, `8001`, and `8002`.
-2. Starts the **Voice Analysis Engine** on port `8001` using its dedicated virtual environment (`truesight-voice-analysis/voice_service/.venv`).
-3. Starts the **Face Analysis Engine** on port `8002` with webcam streaming and telemetry.
-4. Starts the **Unified Gateway** on port `8000`.
-5. Automatically opens your default web browser to **`http://localhost:8000`**.
-6. When you press `Ctrl+C` in the terminal, all three processes are terminated cleanly.
-
----
-
-## 5. API Reference & Gateway Routing
-
-| Endpoint | Method | Target Backend | Description |
-| :--- | :---: | :--- | :--- |
-| `http://localhost:8000/` | `GET` | Gateway | Unified Trusight Dashboard HTML |
-| `http://localhost:8000/api/health` | `GET` | Gateway | Aggregated health check for both engines |
-| `http://localhost:8000/api/face/video_feed` | `GET` | Face Engine (`:8002`) | Live MJPEG stream with full overlays |
-| `http://localhost:8000/api/face/live` | `GET` | Face Engine (`:8002`) | Live truth score, sentiment, AUs, head pose |
-| `http://localhost:8000/api/face/camera/start` | `POST` | Face Engine (`:8002`) | Starts hardware webcam stream |
-| `http://localhost:8000/api/face/camera/stop` | `POST` | Face Engine (`:8002`) | Stops and releases webcam hardware |
-| `http://localhost:8000/api/voice/analyze` | `POST` | Voice Engine (`:8001`) | Analyzes uploaded audio file |
-| `http://localhost:8000/api/voice/live/analyze` | `POST` | Voice Engine (`:8001`) | Analyzes microphone segment chunk |
-| `http://localhost:8000/api/voice/live/status` | `GET` | Voice Engine (`:8001`) | Live recording session telemetry |
-| `http://localhost:8000/ws/voice/live` | `WS` | Voice Engine (`:8001`) | Bidirectional WebSocket for real-time live push |
-
----
-
-## 6. Directory Structure
-
-```
-Trusight/
-├── run_trusight.bat                         # One-click Windows startup batch script
-├── trusight_launcher.py                     # Multi-process orchestrator & health manager
-├── trusight_server.py                       # Unified FastAPI Gateway (port 8000)
-├── README.md                                # Comprehensive documentation
-│
-├── static/                                  # Unified Dashboard Web Application
-│   ├── index.html                           # Single-page dashboard HTML
+  Local deployment                    Python services and a unified
+                                  localhost dashboard
+Exact model providers, endpoints, and dependencies depend on each
+module's configuration.
+Project Structure
+The following is a high-level view of the project. Exact files and
+optional modules may vary by configuration.
+TRUSIGHT/
+├── trusight_launcher.py                  # Coordinates local application services
+├── trusight_server.py                    # Unified FastAPI gateway
+├── requirements.txt                      # Root-level Python dependencies
+├── static/
+│   ├── index.html                        # Dashboard interface
 │   ├── css/
-│   │   └── dashboard.css                    # Professional dark forensic design system
+│   │   └── dashboard.css                 # Dashboard styling
 │   └── js/
-│       ├── dashboard.js                     # Master coordinator & cross-modal sync
-│       ├── face_module.js                   # Face stream & telemetry client
-│       └── voice_module.js                  # Voice live mic, upload, & acoustic observations
-│
-├── RealTime-Facial-Expression-Recognition/  # Preserved Face Analysis Project
+│       ├── dashboard.js                  # Dashboard coordination
+│       ├── face_module.js                # Face module frontend
+│       ├── voice_module.js               # Voice module frontend
+│       └── gemini_module.js              # Text/LLM module frontend, if configured
+├── RealTime-Facial-Expression-Recognition/
 │   └── AU/
-│       ├── run.bat                          # Preserved standalone OpenCV CLI launcher
-│       ├── run_api.bat                      # Face API launcher (port 8002)
-│       └── facial_cues/
-│           ├── api/server.py                # Live streaming & telemetry FastAPI backend
-│           ├── pipeline/orchestrator.py     # Main processing loop with web frame caching
-│           └── models/                      # AffectNet & Deception neural models
-│
-└── truesight-voice-analysis/                # Preserved Voice Analysis Project
-    └── voice_service/
-        ├── run_server.bat                   # Voice service launcher (port 8001)
-        ├── .venv/                           # Dedicated virtualenv (scikit-learn, parselmouth)
-        └── app/
-            ├── main.py                      # Voice FastAPI entrypoint (with CORS & structured live analysis)
-            ├── explanation.py               # Rule-based acoustic evidence breakdown
-            └── predictor.py                 # Random Forest deception classifier
-```
+│       └── facial_cues/                  # Facial analysis service and pipeline
+├── truesight-voice-analysis/
+│   └── voice_service/
+│       └── app/                          # Voice analysis API and processing
+└── TruSight_Gemini_API/
+    └── TruSight_Gemini_API/               # Text analysis, LLM, and RAG components
+Local Execution
+The unified dashboard is designed to run locally at:
 
----
-
-## 7. Verification Checklist
-
-- [x] **Face Module**: Webcam loads inside dashboard; overlays (Truth Score, Sentiment, AUs, Head Pose, Gaze) render in real-time; underlying ML calculations unchanged.
-- [x] **Voice Module**: Live microphone and file upload both work; `Raw Model Score` renamed to `Deception Score` with exact numerical precision; all acoustic observations (pitch, tempo, pauses, stability, intensity) displayed directly.
-- [x] **Single Page Dashboard**: All features accessible on `http://localhost:8000` without page reloads or external window redirects.
-- [x] **Forensic Aesthetic**: High-contrast dark intelligence styling with HUD reticles and clean typography.
-- [x] **Startup & Teardown**: `run_trusight.bat` launches all services with one command; `Ctrl+C` cleans up all ports and processes.
+http://localhost:8000
+Option 1: Run with Python
+From the project root, execute:
+python trusight_launcher.py
+Option 2: Windows startup script
+If the repository includes and configures the startup script, run:
+.\run_trusight.bat
+The launcher is intended to coordinate the configured dashboard,
+facial-analysis, and voice-analysis services. Text-analysis services and
+external model clients must also be configured according to their own
+requirements.
+Configuration Notes
+- Install the dependencies required by each service.
+- Configure any required API credentials through environment
+  variables.
+- Keep real .env files and API keys out of version control.
+- Follow the setup instructions in the relevant module's README, if
+  available.
+- Confirm that the required local ports are available before starting
+  the application.
+The exact installation commands and required environment variables
+depend on the configuration of the checked-out project. Consult the
+module documentation for service-specific setup.
+How TRUSIGHT Works
+1. Provide evidence: Start the webcam or provide audio, text, or
+   supported documents.
+2. Process each modality: The configured face, voice, and text
+   pipelines extract their respective signals or content.
+3. Generate module outputs: Each pipeline returns its own
+   predictions, observations, scores, or structured explanations.
+4. Review results: Examine the outputs in the dashboard and compare
+   them with the original evidence.
+5. Validate conclusions: Use source verification and human review
+   before drawing investigative conclusions.
+Responsible Use and Limitations
+- A model score is an output of the configured model, not a guarantee
+  of truth or deception.
+- Facial expressions and vocal characteristics are affected by
+  context, individual differences, recording conditions, and other
+  factors.
+- Language-model outputs may be incomplete or incorrect and should be
+  verified against source documents.
+- Do not treat a single modality---or an unvalidated combination of
+  modalities---as conclusive evidence of deception.
+- Use appropriate privacy, consent, data-protection, and
+  access-control practices when handling audio, video, and case
+  documents.
+Project Objective
+TRUSIGHT aims to provide a unified environment for reviewing facial,
+vocal, and textual evidence with AI-assisted tools. By bringing these
+complementary modalities into one interface, the platform seeks to make
+evidence review more organized, interpretable, and accessible while
+keeping human judgment and source verification central.
