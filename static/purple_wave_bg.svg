@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1200" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- Crisp, rich violet gradient strokes: ~25% richer color saturation and clean stroke definitions -->
+    <linearGradient id="visViolet1" x1="0%" y1="30%" x2="100%" y2="70%">
+      <stop offset="0%" stop-color="#5824c6" stop-opacity="0.80"/>
+      <stop offset="35%" stop-color="#7a46e5" stop-opacity="0.90"/>
+      <stop offset="70%" stop-color="#9a6af3" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#6030ce" stop-opacity="0.65"/>
+    </linearGradient>
+    <linearGradient id="visViolet2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#421ca8" stop-opacity="0.85"/>
+      <stop offset="45%" stop-color="#6c34d8" stop-opacity="0.80"/>
+      <stop offset="80%" stop-color="#915ef4" stop-opacity="0.70"/>
+      <stop offset="100%" stop-color="#b085ff" stop-opacity="0.60"/>
+    </linearGradient>
+    <linearGradient id="visViolet3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7e4bf3" stop-opacity="0.70"/>
+      <stop offset="50%" stop-color="#5f1dce" stop-opacity="0.78"/>
+      <stop offset="100%" stop-color="#9b7bf7" stop-opacity="0.60"/>
+    </linearGradient>
+    <linearGradient id="visVioletEdge" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#6d35dc" stop-opacity="0.75"/>
+      <stop offset="50%" stop-color="#8f60f0" stop-opacity="0.60"/>
+      <stop offset="100%" stop-color="#bda0fa" stop-opacity="0.30"/>
+    </linearGradient>
+
+    <!-- Translucent silk ribbon depth fills between curves -->
+    <linearGradient id="silkFillRibbon1" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6c34d8" stop-opacity="0.16"/>
+      <stop offset="50%" stop-color="#8f62e8" stop-opacity="0.11"/>
+      <stop offset="100%" stop-color="#c4b5fd" stop-opacity="0.03"/>
+    </linearGradient>
+    <linearGradient id="silkFillRibbon2" x1="100%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#551bc4" stop-opacity="0.18"/>
+      <stop offset="60%" stop-color="#7e4af0" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#ddd6fe" stop-opacity="0.02"/>
+    </linearGradient>
+    <linearGradient id="silkFillRibbon3" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7949e2" stop-opacity="0.12"/>
+      <stop offset="60%" stop-color="#a075fa" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#ede9fe" stop-opacity="0.0"/>
+    </linearGradient>
+    <linearGradient id="ambientGlowGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#7032e5" stop-opacity="0.13"/>
+      <stop offset="100%" stop-color="#9a72f5" stop-opacity="0.0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Atmospheric ambient lavender glow clouds -->
+  <circle cx="1400" cy="1000" r="440" fill="url(#ambientGlowGrad)" opacity="0.85"/>
+  <circle cx="280" cy="1050" r="400" fill="url(#ambientGlowGrad)" opacity="0.75"/>
+  <circle cx="1520" cy="240" r="340" fill="url(#ambientGlowGrad)" opacity="0.65"/>
+  <circle cx="60" cy="500" r="280" fill="url(#ambientGlowGrad)" opacity="0.5"/>
+
+  <!-- Shaded silk depth ribbon 1 (bottom left to center sweep) -->
+  <path d="M-80,1030 C280,930 490,1120 890,970 C1220,840 1420,940 1720,820 L1720,1220 L-80,1220 Z" fill="url(#silkFillRibbon1)" />
+
+  <!-- Primary Sweeping Silk Wave Set 1 (Crisp, defined 2.2px - 1.6px visible lines) -->
+  <g fill="none" stroke="url(#visViolet1)">
+    <path d="M-80,890 C280,790 470,990 870,840 C1200,720 1380,820 1720,710" stroke-width="2.4" opacity="0.85"/>
+    <path d="M-80,920 C280,820 480,1020 880,870 C1210,750 1390,850 1720,740" stroke-width="2.3" opacity="0.82"/>
+    <path d="M-80,950 C270,850 490,1050 890,900 C1220,780 1400,870 1720,770" stroke-width="2.1" opacity="0.78"/>
+    <path d="M-80,980 C260,880 500,1080 900,930 C1230,810 1410,890 1720,800" stroke-width="2.0" opacity="0.74"/>
+    <path d="M-80,1010 C250,910 510,1110 910,960 C1240,840 1420,910 1720,830" stroke-width="1.9" opacity="0.70"/>
+    <path d="M-80,1040 C240,940 520,1140 920,990 C1250,870 1430,930 1720,860" stroke-width="1.8" opacity="0.66"/>
+    <path d="M-80,1070 C230,970 530,1170 930,1020 C1260,900 1440,950 1720,890" stroke-width="1.7" opacity="0.62"/>
+    <path d="M-80,1100 C220,1000 540,1200 940,1050 C1270,930 1450,970 1720,920" stroke-width="1.6" opacity="0.58"/>
+    <path d="M-80,1130 C210,1030 550,1230 950,1080 C1280,960 1460,990 1720,950" stroke-width="1.6" opacity="0.52"/>
+    <!-- Additional layered subtle line -->
+    <path d="M-80,1160 C200,1060 560,1250 960,1110 C1290,990 1470,1010 1720,980" stroke-width="1.5" opacity="0.45"/>
+  </g>
+
+  <!-- Shaded silk depth ribbon 2 (diagonal ascending from lower-middle toward upper-right) -->
+  <path d="M260,1240 C520,1000 780,1060 1140,840 C1390,690 1520,720 1750,610 L1750,1220 L260,1220 Z" fill="url(#silkFillRibbon2)" />
+
+  <!-- Diagonal Sweeping Topographic Wave Set 2 (Crisp deep violet curves with enhanced definition) -->
+  <g fill="none" stroke="url(#visViolet2)">
+    <path d="M210,1200 C460,970 720,1030 1080,810 C1330,650 1460,690 1740,560" stroke-width="2.5" opacity="0.88"/>
+    <path d="M240,1220 C490,990 750,1050 1110,830 C1360,670 1490,710 1740,590" stroke-width="2.4" opacity="0.85"/>
+    <path d="M270,1240 C520,1010 780,1070 1140,850 C1390,690 1510,730 1740,620" stroke-width="2.3" opacity="0.80"/>
+    <path d="M300,1260 C550,1030 810,1090 1170,870 C1420,710 1530,750 1740,650" stroke-width="2.1" opacity="0.75"/>
+    <path d="M330,1280 C580,1050 840,1110 1200,890 C1450,730 1550,770 1740,680" stroke-width="2.0" opacity="0.70"/>
+    <path d="M360,1300 C610,1070 870,1130 1230,910 C1480,750 1570,790 1740,710" stroke-width="1.9" opacity="0.65"/>
+    <path d="M390,1320 C640,1090 900,1150 1260,930 C1510,770 1590,810 1740,740" stroke-width="1.8" opacity="0.60"/>
+    <path d="M420,1340 C670,1110 930,1170 1290,950 C1540,790 1610,830 1740,770" stroke-width="1.7" opacity="0.55"/>
+    <!-- Additional layered subtle line extending upward -->
+    <path d="M450,1360 C700,1130 960,1190 1320,970 C1570,810 1630,850 1740,800" stroke-width="1.5" opacity="0.48"/>
+  </g>
+
+  <!-- Left margin & lower-left upward flowing contour lines -->
+  <g fill="none" stroke="url(#visVioletEdge)">
+    <path d="M-60,540 C80,680 140,840 220,1060" stroke-width="1.8" opacity="0.65"/>
+    <path d="M-60,580 C70,710 130,860 210,1090" stroke-width="1.7" opacity="0.60"/>
+    <path d="M-60,620 C60,740 120,880 200,1120" stroke-width="1.6" opacity="0.55"/>
+    <path d="M-60,660 C50,770 110,900 190,1150" stroke-width="1.5" opacity="0.50"/>
+  </g>
+
+  <!-- Flowing curves framing top right & upper-right workspace perimeter -->
+  <path d="M740,-30 C1010,160 1220,90 1480,240 C1630,330 1710,280 1820,380 L1820,-30 Z" fill="url(#silkFillRibbon3)" />
+  <g fill="none" stroke="url(#visViolet3)">
+    <path d="M700,-40 C970,150 1190,80 1440,230 C1590,320 1680,270 1820,370" stroke-width="2.1" opacity="0.72"/>
+    <path d="M730,-20 C1000,170 1220,100 1470,250 C1620,340 1700,290 1820,390" stroke-width="1.9" opacity="0.68"/>
+    <path d="M760,0 C1030,190 1250,120 1500,270 C1640,360 1720,310 1820,410" stroke-width="1.8" opacity="0.62"/>
+    <path d="M800,20 C1070,210 1280,140 1530,290 C1660,380 1730,330 1820,430" stroke-width="1.6" opacity="0.56"/>
+    <path d="M840,40 C1100,230 1310,160 1560,310 C1680,400 1740,350 1820,450" stroke-width="1.5" opacity="0.50"/>
+  </g>
+</svg>

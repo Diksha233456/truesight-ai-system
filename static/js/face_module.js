@@ -29,6 +29,7 @@ class FaceAnalysisModule {
     // HUD overlays
     this.hudFps = document.getElementById('hudFps');
     this.hudFaceId = document.getElementById('hudFaceId');
+    this.faceActiveTag = document.getElementById('faceActiveTag');
 
     // Action unit elements map
     this.auBars = {
@@ -57,6 +58,7 @@ class FaceAnalysisModule {
     this.pollInterval = null;
     this.currentState = {
       ready: false,
+      timestamp: null,
       verdict: 'WAITING',
       truthScore: null,
       pLie: null,
@@ -78,12 +80,22 @@ class FaceAnalysisModule {
       this.btnSnapshot.addEventListener('click', () => this.takeSnapshot());
     }
 
-    // Handle video feed errors gracefully
+    // Handle video feed errors and auto-recover
+    this._streamConnected = false;
+    this._retryTimer = null;
+    this._lastStreamReconnect = 0;
     if (this.streamImg) {
       this.streamImg.onerror = () => {
-        this.updateCameraStatus(false);
+        this._streamConnected = false;
+        if (this._retryTimer) clearTimeout(this._retryTimer);
+        this._retryTimer = setTimeout(() => {
+          if (this.isCameraRunning && this.streamImg) {
+            this.streamImg.src = `/api/face/video_feed?t=${Date.now()}`;
+          }
+        }, 1500);
       };
       this.streamImg.onload = () => {
+        this._streamConnected = true;
         this.updateCameraStatus(true);
       };
     }
@@ -121,7 +133,24 @@ class FaceAnalysisModule {
     if (!data) return;
 
     this.currentState.ready = Boolean(data.ready);
+    // If camera is reporting active but video stream is disconnected, auto-reconnect
+    if (data.camera_running && !this._streamConnected && this.streamImg) {
+      const now = Date.now();
+      if (!this._lastStreamReconnect || (now - this._lastStreamReconnect > 2000)) {
+        this._lastStreamReconnect = now;
+        this.streamImg.src = `/api/face/video_feed?t=${now}`;
+      }
+    }
     const deception = data.deception || {};
+    const rawTs = (data.timestamp !== undefined && data.timestamp !== null)
+      ? data.timestamp
+      : (deception.timestamp !== undefined && deception.timestamp !== null ? deception.timestamp : null);
+    const numTs = (rawTs !== null && typeof rawTs === 'number' && Number.isFinite(rawTs) && rawTs > 0)
+      ? rawTs
+      : (typeof rawTs === 'string' && !isNaN(Number(rawTs)) && Number.isFinite(Number(rawTs)) && Number(rawTs) > 0)
+        ? Number(rawTs)
+        : null;
+    this.currentState.timestamp = numTs;
     const emotion = data.emotion || {};
     const faceCues = data.face_cues || {};
 
@@ -135,40 +164,95 @@ class FaceAnalysisModule {
     }
 
     // 2. Truth / Deception Score
-    const label = (deception.label || 'WAITING').toUpperCase();
-    this.currentState.verdict = label;
-    const pLie = deception.p_lie !== null && deception.p_lie !== undefined ? deception.p_lie : null;
-    this.currentState.pLie = pLie;
+    const hasData = Boolean(data.ready && deception && deception.label && deception.label !== 'WAITING');
+    const pLie = (deception.p_lie !== null && deception.p_lie !== undefined) ? Number(deception.p_lie) : null;
 
-    let truthScore = null;
-    if (pLie !== null) {
-      truthScore = Math.max(0, Math.min(1, 1.0 - pLie));
-    } else if (deception.score !== null && deception.score !== undefined) {
-      truthScore = label === 'TRUTH' ? deception.score : (label === 'LIE' ? 1.0 - deception.score : 0.5);
-    }
-    this.currentState.truthScore = truthScore;
+    if (!hasData) {
+      const isCalibrating = Boolean(data.ready && (!deception || deception.label === 'WAITING'));
+      const statusLabel = isCalibrating ? 'INSUFFICIENT FACIAL DATA' : 'MODEL UNAVAILABLE';
+      this.currentState.verdict = statusLabel;
+      this.currentState.mappedClassLabel = statusLabel;
+      this.currentState.pLie = null;
+      this.currentState.classProbability = null;
+      this.currentState.truthScore = null;
+      this.currentState.signalQuality = isCalibrating ? 'CALIBRATING' : 'UNAVAILABLE';
 
-    if (this.verdictBadge) {
-      this.verdictBadge.textContent = label;
-      this.verdictBadge.className = 'metric-badge ' + (label === 'TRUTH' ? 'truth' : label === 'LIE' ? 'lie' : 'uncertain');
-    }
+      if (this.verdictBadge) {
+        this.verdictBadge.textContent = statusLabel;
+        this.verdictBadge.className = 'metric-badge uncertain';
+      }
 
-    if (this.truthScoreVal) {
-      if (truthScore !== null) {
-        this.truthScoreVal.textContent = `${Math.round(truthScore * 100)}%`;
-      } else {
+      if (this.truthScoreVal) {
         this.truthScoreVal.textContent = '—';
       }
-    }
 
-    if (this.truthMeterFill) {
-      const pct = truthScore !== null ? Math.round(truthScore * 100) : 0;
-      this.truthMeterFill.style.width = `${pct}%`;
-      this.truthMeterFill.className = 'meter-fill ' + (label === 'TRUTH' ? 'truth' : label === 'LIE' ? 'lie' : 'uncertain');
-    }
+      if (this.truthMeterFill) {
+        this.truthMeterFill.style.width = '0%';
+        this.truthMeterFill.className = 'meter-fill uncertain';
+      }
 
-    if (this.lieProbVal) {
-      this.lieProbVal.textContent = pLie !== null ? `${Math.round(pLie * 100)}%` : '—';
+      if (this.lieProbVal) {
+        this.lieProbVal.textContent = isCalibrating ? 'Awaiting stable face window' : 'Camera offline';
+      }
+    } else {
+      let verdictLabel = 'INCONCLUSIVE';
+      let badgeClass = 'uncertain';
+      let predProb = pLie;
+      let scoreText = '—';
+      let meaningText = '';
+
+      if (pLie !== null) {
+        const pTruth = Math.max(0.0, Math.min(1.0, 1.0 - pLie));
+        if (pLie >= 0.45 && pLie <= 0.55) {
+          verdictLabel = 'INCONCLUSIVE';
+          badgeClass = 'uncertain';
+          predProb = pLie;
+          scoreText = `P(class): ${pLie.toFixed(3)}`;
+          meaningText = `Threshold band: P(Lie)=${pLie.toFixed(3)}, P(Truth)=${pTruth.toFixed(3)}`;
+        } else if (pLie > 0.55 || deception.label === 'LIE') {
+          verdictLabel = 'MODEL PREDICTS LIE CLASS';
+          badgeClass = 'lie';
+          predProb = pLie;
+          scoreText = `P(Lie): ${pLie.toFixed(3)}`;
+          meaningText = `P(class 1 Lie): ${pLie.toFixed(3)} (uncalibrated)`;
+        } else {
+          verdictLabel = 'MODEL PREDICTS TRUTH CLASS';
+          badgeClass = 'truth';
+          predProb = pTruth;
+          scoreText = `P(Truth): ${pTruth.toFixed(3)}`;
+          meaningText = `P(class 0 Truth): ${pTruth.toFixed(3)} (P[Lie]=${pLie.toFixed(3)})`;
+        }
+      } else {
+        verdictLabel = 'INCONCLUSIVE';
+        badgeClass = 'uncertain';
+        meaningText = 'No probability returned for current window';
+      }
+
+      this.currentState.verdict = verdictLabel;
+      this.currentState.mappedClassLabel = verdictLabel;
+      this.currentState.pLie = pLie;
+      this.currentState.classProbability = predProb;
+      this.currentState.truthScore = (pLie !== null ? (1.0 - pLie) : 0.5);
+      this.currentState.signalQuality = 'USABLE_OBSERVATIONS';
+
+      if (this.verdictBadge) {
+        this.verdictBadge.textContent = verdictLabel;
+        this.verdictBadge.className = 'metric-badge ' + badgeClass;
+      }
+
+      if (this.truthScoreVal) {
+        this.truthScoreVal.textContent = scoreText;
+      }
+
+      if (this.truthMeterFill) {
+        const pct = predProb !== null ? Math.round(predProb * 100) : 50;
+        this.truthMeterFill.style.width = `${pct}%`;
+        this.truthMeterFill.className = 'meter-fill ' + badgeClass;
+      }
+
+      if (this.lieProbVal) {
+        this.lieProbVal.textContent = meaningText;
+      }
     }
 
     // 3. Reasons List
@@ -185,10 +269,16 @@ class FaceAnalysisModule {
       }
     }
 
-    // 4. Sentiment / Emotion
-    const emoLabel = emotion.label || 'NEUTRAL';
-    const emoScore = emotion.score !== null && emotion.score !== undefined ? emotion.score : null;
-    this.currentState.sentiment = emoLabel;
+    // 4. Sentiment / Emotion (Distinguish genuine predictions from missing/uncalibrated state)
+    const hasEmotion = Boolean(emotion && emotion.label && emotion.label.trim() !== '');
+    const emoLabel = hasEmotion ? emotion.label.trim().toUpperCase() : (data.face_present ? 'CALIBRATING' : '—');
+    const emoScore = (hasEmotion && emotion.score !== null && emotion.score !== undefined) ? emotion.score : null;
+    this.currentState.sentiment = hasEmotion ? emoLabel : null;
+    this.currentState.emotion = {
+      label: hasEmotion ? emoLabel : '',
+      score: emoScore,
+      timestamp: (hasEmotion && emotion.timestamp) ? emotion.timestamp : null,
+    };
 
     if (this.sentimentBadge) {
       this.sentimentBadge.textContent = emoLabel;
@@ -231,6 +321,14 @@ class FaceAnalysisModule {
       const text = this.cameraStatusPill.querySelector('.pill-text');
       if (dot) dot.className = 'pill-dot ' + (running ? 'online' : 'offline');
       if (text) text.textContent = running ? `FACE: ONLINE (${this.currentState.fps.toFixed(0)} FPS)` : 'FACE: STANDBY';
+    }
+
+    if (this.faceActiveTag) {
+      this.faceActiveTag.textContent = running ? 'WEBCAM ACTIVE' : 'CAMERA STANDBY';
+    }
+
+    if (!running && this.hudFps) {
+      this.hudFps.textContent = 'OFFLINE';
     }
 
     if (this.btnToggleCam) {

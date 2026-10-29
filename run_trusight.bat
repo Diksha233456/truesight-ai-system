@@ -11,6 +11,16 @@ echo   TRUSIGHT MULTIMODAL FORENSIC INTELLIGENCE SUITE
 echo   Starting Unified Services...
 echo ============================================================
 
-python trusight_launcher.py
+if not defined TRUSIGHT_PYTHON (
+    if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" (
+        set "TRUSIGHT_PYTHON=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
+    )
+)
+
+if defined TRUSIGHT_PYTHON (
+    "%TRUSIGHT_PYTHON%" trusight_launcher.py
+) else (
+    python trusight_launcher.py
+)
 
 endlocal

@@ -16,15 +16,40 @@ def extract_pdf(pdf_path):
 
 
 def chunk_text(pages, chunk_size=200, overlap=40):
+    """
+    Sentence-aware paragraph chunking.
+    Preserves sentence boundaries and negative qualifiers (e.g., 'not', 'never', 'denies')
+    across window overlaps while strictly preserving the 1-indexed document page reference.
+    """
+    import re
     chunks = []
     for page_data in pages:
-        words = page_data["text"].split()
-        start = 0
-        while start < len(words):
-            piece = words[start:start + chunk_size]
-            if piece:
-                chunks.append({"text": " ".join(piece), "page": page_data["page"]})
-            start += max(1, chunk_size - overlap)
+        text = page_data["text"]
+        # Split on sentence terminators while preserving punctuation
+        raw_sentences = re.split(r'(?<=[.!?])\s+', text)
+        sentences = [s.strip() for s in raw_sentences if s.strip()]
+        if not sentences:
+            continue
+
+        current_chunk_words = []
+        for sentence in sentences:
+            words = sentence.split()
+            if len(current_chunk_words) + len(words) > chunk_size and current_chunk_words:
+                chunks.append({
+                    "text": " ".join(current_chunk_words),
+                    "page": page_data["page"],
+                })
+                # Retain overlap words from the end of previous chunk to prevent boundary truncation
+                overlap_words = current_chunk_words[-overlap:] if len(current_chunk_words) > overlap else current_chunk_words
+                current_chunk_words = list(overlap_words) + words
+            else:
+                current_chunk_words.extend(words)
+
+        if current_chunk_words:
+            chunks.append({
+                "text": " ".join(current_chunk_words),
+                "page": page_data["page"],
+            })
     return chunks
 
 

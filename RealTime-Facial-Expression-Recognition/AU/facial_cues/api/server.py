@@ -60,25 +60,84 @@ def _split_line(text: str) -> dict:
 import time
 from fastapi.responses import StreamingResponse, JSONResponse
 
-def snapshot() -> dict:
+def snapshot(now: float | None = None) -> dict:
+    if now is None:
+        now = time.time()
+
+    camera_running = bool((_worker is not None and _worker.is_alive()) or (pipeline is not None and getattr(pipeline, "_is_running", False)))
+
     if pipeline is None:
-        return {"ready": False, "deception": None, "emotion": None, "fps": 0.0, "faces_detected": 0, "face_cues": {}}
+        return {
+            "ready": False,
+            "camera_running": camera_running,
+            "faces_detected": 0,
+            "face_detected": False,
+            "face_present": False,
+            "deception": None,
+            "emotion": None,
+            "fps": 0.0,
+            "face_cues": {},
+            "timestamp": None,
+        }
+
+    # Extract detected faces from latest frame
+    viz_data = getattr(pipeline, "_last_viz_data", {}) or {}
+    faces = viz_data.get("faces", [])
+    faces_detected = len(faces)
+    face_detected = faces_detected > 0
+
+    # Face presence tracking with single-frame jitter/flicker tolerance (1.0s window)
+    if face_detected:
+        pipeline._last_face_detected_time = now
+        face_present = True
+    else:
+        last_seen = getattr(pipeline, "_last_face_detected_time", None)
+        face_present = bool(last_seen is not None and (now - last_seen) <= 1.0)
+
+    # Deception prediction tracking
     deception_text = getattr(pipeline, "_last_deception_text", "") or ""
     reasons = list(getattr(pipeline, "_last_deception_reasons", []) or [])
     emotion_text = getattr(pipeline, "_last_emotion_text", "") or ""
+    emo_time = getattr(pipeline, "_last_emotion_time", 0.0)
     stored = getattr(pipeline, "_last_deception", {}) or {}
     latest = None
     if stored:
         latest = next(reversed(stored.values()))
+
     deception = _split_line(deception_text)
     deception["reasons"] = reasons
     deception["comment"] = reasons[0] if reasons else ""
     deception["p_lie"] = None if latest is None else latest.get("p_lie")
     deception["model_label"] = None if latest is None else latest.get("label")
 
+    # Prediction timestamp and freshness validation
+    pred_time = getattr(pipeline, "_last_prediction_time", 0.0)
+    has_valid_prediction = bool(pred_time and pred_time > 0.0)
+
+    # If face is lost (>1.0s without detection) or prediction is older than 4.5s, do NOT represent old prediction as fresh
+    is_prediction_fresh = False
+    pred_timestamp = None
+    if has_valid_prediction and face_present:
+        pred_age = max(0.0, now - pred_time)
+        if pred_age <= 4.5:
+            is_prediction_fresh = True
+            pred_timestamp = float(pred_time)
+
+    deception["timestamp"] = pred_timestamp
+
+    if not is_prediction_fresh:
+        if not face_present:
+            deception["label"] = "WAITING"
+            deception["p_lie"] = None
+            deception["model_label"] = None
+            deception["reasons"] = ["Awaiting face detection"] if not faces_detected else []
+        elif not has_valid_prediction:
+            deception["label"] = "WAITING"
+            deception["p_lie"] = None
+            deception["model_label"] = None
+            deception["reasons"] = ["Calibrating facial cues baseline..."]
+
     # Extract facial cues telemetry
-    viz_data = getattr(pipeline, "_last_viz_data", {}) or {}
-    faces = viz_data.get("faces", [])
     face_cues = {}
     if faces:
         p_face = faces[0]
@@ -104,13 +163,39 @@ def snapshot() -> dict:
             ]
         }
 
+    # Emotion prediction tracking with freshness check
+    has_valid_emotion = bool(emo_time and emo_time > 0.0)
+    is_emotion_fresh = False
+    emo_timestamp = None
+    if has_valid_emotion and face_present:
+        emo_age = max(0.0, now - emo_time)
+        if emo_age <= 4.5:
+            is_emotion_fresh = True
+            emo_timestamp = float(emo_time)
+
+    if is_emotion_fresh:
+        emotion_obj = _split_line(emotion_text)
+        emotion_obj["timestamp"] = emo_timestamp
+    else:
+        emotion_obj = {"line": "", "label": "", "score": None, "timestamp": None}
+
+    # Ready when camera is actively running, face is present, and either deception or emotion has evaluated fresh
+    ready_flag = bool(face_present and (is_prediction_fresh or is_emotion_fresh))
+
+    # Overall snapshot timestamp
+    snapshot_timestamp = pred_timestamp or (emo_timestamp if (is_emotion_fresh and face_present) else (float(now) if face_present else None))
+
     return {
-        "ready": bool(deception_text or emotion_text),
+        "ready": ready_flag,
+        "camera_running": camera_running,
+        "faces_detected": faces_detected,
+        "face_detected": face_detected,
+        "face_present": face_present,
         "deception": deception,
-        "emotion": _split_line(emotion_text),
+        "emotion": emotion_obj,
         "fps": round(getattr(pipeline, "_last_fps", 0.0), 1),
-        "faces_detected": len(faces),
         "face_cues": face_cues,
+        "timestamp": snapshot_timestamp,
     }
 
 
@@ -184,12 +269,17 @@ def _emotion():
     return {"ready": body["ready"], **(body["emotion"] or {})}
 
 
+import asyncio
+from fastapi import Request
+
 @app.get("/video_feed")
-def video_feed():
+async def video_feed(request: Request):
     """MJPEG streaming endpoint for the live webcam feed with full overlays."""
-    def frame_gen():
+    async def frame_gen():
         last_sent_id = -1
         while True:
+            if await request.is_disconnected():
+                break
             current_id = getattr(pipeline, "_jpeg_frame_id", 0)
             if current_id != last_sent_id:
                 frame_bytes = getattr(pipeline, "_last_jpeg", None)
@@ -199,7 +289,7 @@ def video_feed():
                         b"--frame\r\n"
                         b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
                     )
-            time.sleep(0.015)  # Responsive check without busy-waiting
+            await asyncio.sleep(0.02)
     return StreamingResponse(frame_gen(), media_type="multipart/x-mixed-replace; boundary=frame")
 
 
@@ -208,16 +298,12 @@ def camera_start():
     global pipeline, _worker
     if _worker is not None and _worker.is_alive():
         return {"status": "already_running", "camera_running": True}
-    if pipeline is None:
-        config = load_config(None)
-        config.deception.enabled = True
-        config.visualization.enabled = True
-        config.output.write_per_frame = False
-        pipeline = PipelineOrchestrator(config)
-        pipeline.initialize()
-    else:
-        pipeline.initialize()
-        pipeline._is_running = True
+    config = load_config(None)
+    config.deception.enabled = True
+    config.visualization.enabled = True
+    config.output.write_per_frame = False
+    pipeline = PipelineOrchestrator(config)
+    pipeline.initialize()
     _worker = threading.Thread(target=_run_camera, name="facial-cues-camera", daemon=True)
     _worker.start()
     return {"status": "started", "camera_running": True}

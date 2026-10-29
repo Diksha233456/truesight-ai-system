@@ -55,6 +55,7 @@ class SegmentResult:
     error: Optional[str] = None    # set if analysis failed for this segment
     speech_detected: bool = True
     speech_status: str = "VOICE DETECTED"
+    timestamp: float = field(default_factory=time.time)
 
     # ── Computed helpers ─────────────────────────────────────────────────────
 
@@ -78,9 +79,11 @@ class SegmentResult:
             "score": round(self.score, 4) if self.score is not None else None,
             "confidence": round(self.confidence, 4) if self.confidence is not None else None,
             "explanation": self.explanation,
+            "features": self.features.dict() if self.features and hasattr(self.features, "dict") else (self.features if isinstance(self.features, dict) else None),
             "error": self.error,
             "speech_detected": self.speech_detected,
             "speech_status": self.speech_status,
+            "timestamp": round(float(self.timestamp), 4) if self.timestamp is not None else None,
         }
 
 
@@ -140,6 +143,7 @@ def analyze_segment(
         A fully populated result; on pipeline error, verdict/score are
         set to safe defaults and SegmentResult.error carries the message.
     """
+    now_ts = time.time()
     if _feature_extractor is None or _predictor is None:
         return SegmentResult(
             segment=segment_index,
@@ -150,6 +154,7 @@ def analyze_segment(
             confidence=0.0,
             explanation=["Analysis pipeline not ready."],
             error="Singletons not injected — call set_singletons() first.",
+            timestamp=now_ts,
         )
 
     end_seconds = start_seconds + audio.duration_seconds
@@ -176,6 +181,7 @@ def analyze_segment(
             confidence=0.0,
             explanation=["Feature extraction failed for this segment."],
             error=str(exc),
+            timestamp=now_ts,
         )
 
     # ── Prediction ────────────────────────────────────────────────────────
@@ -192,6 +198,7 @@ def analyze_segment(
             confidence=0.0,
             explanation=["Prediction failed for this segment."],
             error=str(exc),
+            timestamp=now_ts,
         )
 
     # ── Explanations ──────────────────────────────────────────────────────
@@ -220,4 +227,6 @@ def analyze_segment(
         confidence=round(confidence, 4),
         explanation=explanation,
         features=features_obj,
+        timestamp=now_ts,
     )
+

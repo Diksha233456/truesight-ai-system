@@ -24,18 +24,75 @@ ROOT_DIR = Path(__file__).resolve().parent
 VOICE_DIR = ROOT_DIR / "truesight-voice-analysis" / "voice_service"
 VOICE_VENV_PY = VOICE_DIR / ".venv" / "Scripts" / "python.exe"
 if not VOICE_VENV_PY.exists():
-    VOICE_PY = sys.executable
-else:
-    VOICE_PY = str(VOICE_VENV_PY)
+    raise RuntimeError(
+        f"Voice Engine dedicated virtual environment not found at: {VOICE_VENV_PY}\n"
+        "Please ensure the voice service .venv is created and populated."
+    )
+VOICE_PY = str(VOICE_VENV_PY)
 
 FACE_DIR = ROOT_DIR / "RealTime-Facial-Expression-Recognition" / "AU"
-FACE_PY = sys.executable
-
 GEMINI_DIR = ROOT_DIR / "Trusight_Gemini_API" / "TruSight_Gemini_API"
-GEMINI_PY = sys.executable
-
 GATEWAY_DIR = ROOT_DIR
-GATEWAY_PY = sys.executable
+
+
+def resolve_python() -> str:
+    """
+    Resolve the Python 3.11 interpreter required by Face, Gemini, and Gateway services.
+    Checks:
+    1. TRUSIGHT_PYTHON environment variable
+    2. Standard Python 3.11 install location on Windows
+    3. Python launcher 'py -3.11'
+    4. Current sys.executable if it is Python 3.11
+    Validates required dependencies (mediapipe, fitz, google.genai, cv2, torch) before returning.
+    """
+    candidates = []
+    if "TRUSIGHT_PYTHON" in os.environ:
+        candidates.append(os.environ["TRUSIGHT_PYTHON"])
+
+    local_app_data = os.environ.get("LOCALAPPDATA", "")
+    if local_app_data:
+        candidates.append(str(Path(local_app_data) / "Programs" / "Python" / "Python311" / "python.exe"))
+
+    # Also check if current sys.executable is 3.11
+    if sys.version_info.major == 3 and sys.version_info.minor == 11:
+        candidates.append(sys.executable)
+
+    selected_py = None
+    for cand in candidates:
+        if cand and Path(cand).exists():
+            selected_py = cand
+            break
+
+    if not selected_py:
+        raise RuntimeError(
+            "TRUSIGHT requires a compatible Python 3.11 environment with mediapipe, PyMuPDF, and google-genai.\n"
+            "None of the candidate paths exist. Set the TRUSIGHT_PYTHON environment variable to your Python 3.11 executable."
+        )
+
+    # Preflight check: verify required imports in the selected interpreter
+    preflight_script = (
+        "import cv2, mediapipe, torch, fitz, google.genai, fastapi, uvicorn;"
+        "print('PREFLIGHT_OK')"
+    )
+    res = subprocess.run(
+        [selected_py, "-c", preflight_script],
+        capture_output=True,
+        text=True,
+    )
+    if "PREFLIGHT_OK" not in res.stdout:
+        err_msg = res.stderr.strip() or res.stdout.strip()
+        raise RuntimeError(
+            f"Selected Python interpreter ({selected_py}) failed preflight dependency check:\n{err_msg}\n"
+            "Please ensure mediapipe, PyMuPDF, google-genai, opencv-python, and torch are installed in this environment."
+        )
+
+    return selected_py
+
+
+SHARED_PY = resolve_python()
+FACE_PY = SHARED_PY
+GEMINI_PY = SHARED_PY
+GATEWAY_PY = SHARED_PY
 
 VOICE_PORT = 8001
 FACE_PORT = 8002

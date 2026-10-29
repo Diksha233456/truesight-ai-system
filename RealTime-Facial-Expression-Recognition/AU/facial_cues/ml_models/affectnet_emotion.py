@@ -41,12 +41,43 @@ class AffectNetEmotion:
         if not TORCH_AVAILABLE:
             raise ImportError("PyTorch is required for AffectNetEmotion.")
         import timm  # noqa: F401  — needed so torch.load can rebuild the network
+        import torch.nn as nn
 
         self.device = torch.device(
             device if device else ("cuda" if torch.cuda.is_available() else "cpu")
         )
-        self.model = torch.load(model_path, map_location=self.device, weights_only=False)
-        self.model.eval()
+
+        # Attempt 1: direct torch.load with immediate forward-pass verification
+        loaded = False
+        try:
+            self.model = torch.load(model_path, map_location=self.device, weights_only=False)
+            self.model.eval()
+            dummy = torch.zeros(1, 3, 224, 224, device=self.device)
+            with torch.no_grad():
+                _ = self.model(dummy)
+            loaded = True
+        except Exception as direct_exc:
+            logger.info("Direct unpickling failed (%s); reconstructing architecture for timm compatibility.", direct_exc)
+
+        # Attempt 2: recreate clean timm model and inject state_dict (handles timm 1.0+ attribute mismatches)
+        if not loaded:
+            try:
+                raw = torch.load(model_path, map_location=self.device, weights_only=False)
+                sd = raw.state_dict() if hasattr(raw, "state_dict") else raw
+                self.model = timm.create_model("tf_efficientnet_b0_ns", pretrained=False)
+                in_features = getattr(self.model.classifier, "in_features", 1280)
+                self.model.classifier = nn.Sequential(nn.Linear(in_features, len(CLASSES)))
+                self.model.load_state_dict(sd)
+                self.model.to(self.device)
+                self.model.eval()
+                dummy = torch.zeros(1, 3, 224, 224, device=self.device)
+                with torch.no_grad():
+                    _ = self.model(dummy)
+                loaded = True
+            except Exception as recon_exc:
+                logger.warning("Architecture reconstruction also failed: %s", recon_exc)
+                raise
+
         self.transform = T.Compose([
             T.ToPILImage(),
             T.Resize((224, 224)),

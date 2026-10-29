@@ -381,19 +381,25 @@ def evaluate_audio_speech_quality(
                 low_energy = float(np.sum(fft_vals[freqs < 250.0] ** 2))
                 low_ratio = low_energy / total_energy
 
-                # Reject if >85% energy below 250 Hz (fan motor / electrical hum)
-                if low_ratio > 0.85:
+                # Vocal band includes fundamental frequency (80-300 Hz) and formants (300-4000 Hz)
+                vocal_band_energy = float(np.sum(fft_vals[(freqs >= 80.0) & (freqs <= 4000.0)] ** 2))
+                vocal_band_ratio = vocal_band_energy / total_energy
+                low_energy = float(np.sum(fft_vals[freqs < 80.0] ** 2))
+                low_ratio = low_energy / total_energy
+
+                # Reject if >90% energy below 80 Hz (pure electrical mains hum / sub-audible rumble)
+                if low_ratio > 0.90:
                     return (
                         False,
-                        f"Acoustic energy concentrated in sub-speech band ({low_ratio * 100:.1f}% < 250 Hz); consistent with fan motor or electrical hum.",
+                        f"Acoustic energy concentrated in sub-speech band ({low_ratio * 100:.1f}% < 80 Hz); consistent with electrical mains hum.",
                         SPEECH_STATUS_VOICE_NOT_DETECTED,
                     )
 
-                # Reject if <15% energy in speech band (300-3400 Hz)
-                if speech_band_ratio < 0.15:
+                # Reject only if vocal band energy is truly negligible (<6% in 80-4000 Hz, or <5% in 300-3400 Hz)
+                if vocal_band_ratio < 0.06 and speech_band_ratio < 0.05:
                     return (
                         False,
-                        f"Insufficient speech-band energy ({speech_band_ratio * 100:.1f}% in 300–3400 Hz). Signal lacks human vocal formant energy.",
+                        f"Insufficient speech-band energy ({speech_band_ratio * 100:.1f}% in 300-3400 Hz, {vocal_band_ratio * 100:.1f}% in 80-4000 Hz). Signal lacks human vocal formant energy.",
                         SPEECH_STATUS_VOICE_NOT_DETECTED,
                     )
         except Exception as fft_exc:

@@ -37,12 +37,6 @@ class VideoSource:
         self._frame_count: int = 0
         self._start_time: float = 0.0
         self._is_file: bool = False
-        self._thread: Optional[threading.Thread] = None
-        self._thread_running: bool = False
-        self._lock = threading.Lock()
-        self._latest_frame = None
-        self._latest_ret = False
-        self._latest_ts = 0.0
 
     def open(self) -> bool:
         """Open the video source. Returns True on success."""
@@ -88,25 +82,7 @@ class VideoSource:
 
         self._frame_count = 0
         self._start_time = time.perf_counter()
-
-        # Start non-blocking capture thread for live webcams
-        if not self._is_file:
-            self._thread_running = True
-            self._thread = threading.Thread(target=self._capture_worker, name="videosource-worker", daemon=True)
-            self._thread.start()
-
         return True
-
-    def _capture_worker(self):
-        """Continuously reads frames in a background thread to prevent camera hardware sync blocking."""
-        while self._thread_running and self._cap is not None and self._cap.isOpened():
-            ret, frame = self._cap.read()
-            ts = (time.perf_counter() - self._start_time) * 1000.0 if self._start_time > 0 else 0.0
-            with self._lock:
-                self._latest_ret = ret
-                self._latest_frame = frame
-                self._latest_ts = ts
-            time.sleep(0.005)
 
     def read(self) -> Tuple[bool, Optional["numpy.ndarray"], float]:
         """
@@ -114,42 +90,27 @@ class VideoSource:
 
         Returns:
             (success, frame_bgr, timestamp_ms)
+            - success: True if a frame was read
+            - frame_bgr: BGR numpy array, or None on failure
+            - timestamp_ms: Timestamp in milliseconds
         """
         if self._cap is None or not self._cap.isOpened():
             return False, None, 0.0
 
-        if not self._is_file:
-            # For live webcam, fetch the latest frame captured by the worker thread
-            with self._lock:
-                ret = self._latest_ret
-                frame = self._latest_frame.copy() if (ret and self._latest_frame is not None) else None
-                ts = self._latest_ts
-
-            if not ret or frame is None:
-                # Fallback to direct read if worker hasn't grabbed a frame yet
-                ret, frame = self._cap.read()
-                ts = (time.perf_counter() - self._start_time) * 1000.0
-
-            if ret and frame is not None:
-                self._frame_count += 1
-                return True, frame, ts
-            return False, None, 0.0
-
-        # For video files, read sequentially
         ret, frame = self._cap.read()
         if not ret or frame is None:
             return False, None, 0.0
 
-        timestamp_ms = self._cap.get(cv2.CAP_PROP_POS_MSEC)
+        if self._is_file:
+            timestamp_ms = self._cap.get(cv2.CAP_PROP_POS_MSEC)
+        else:
+            timestamp_ms = (time.perf_counter() - self._start_time) * 1000.0
+
         self._frame_count += 1
         return True, frame, timestamp_ms
 
     def release(self):
         """Release the video source."""
-        self._thread_running = False
-        if self._thread is not None:
-            self._thread.join(timeout=1.0)
-            self._thread = None
         if self._cap is not None:
             self._cap.release()
             self._cap = None

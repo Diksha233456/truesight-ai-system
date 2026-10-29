@@ -172,6 +172,15 @@ class PipelineOrchestrator:
         self._frame_id: int = 0
         self._fps_counter: _FPSCounter = _FPSCounter()
         self._is_running: bool = False
+        import threading
+        self._inference_lock = threading.Lock()
+        self._viz_lock = threading.Lock()
+        self._inference_event = threading.Event()
+        self._inference_worker_thread = None
+        self._latest_inference_frame = None
+        self._latest_inference_ts = 0.0
+        self._last_emotion_text: str = ""
+        self._last_emotion_time: float = 0.0
 
     def initialize(self):
         """Initialize all modules. Must be called before run()."""
@@ -215,36 +224,73 @@ class PipelineOrchestrator:
         self._last_deception_text = ""
         self._last_deception_reasons: list = []
         self._last_emotion_text = ""
+        self._last_emotion_time = 0.0
         self._last_jpeg: Optional[bytes] = None
         self._last_fps: float = float(fps)
         self._last_viz_data: Dict[str, Any] = {}
         self._jpeg_frame_id: int = 0
         logger.info(f"Pipeline running (FPS={fps}, visualize={visualize}, show_gui_window={show_gui_window})")
 
+        # Start dedicated background inference worker thread
+        def _inference_loop():
+            while self._is_running:
+                # Wait for next available frame
+                if not self._inference_event.wait(timeout=0.1):
+                    continue
+                self._inference_event.clear()
+
+                with self._inference_lock:
+                    if self._latest_inference_frame is None:
+                        continue
+                    inf_frame = self._latest_inference_frame
+                    inf_ts = self._latest_inference_ts
+
+                try:
+                    f_out, v_data = self.process_frame(inf_frame, inf_ts)
+                    self.json_writer.write_frame(f_out)
+                    with self._viz_lock:
+                        self._last_viz_data = v_data
+                except Exception as exc:
+                    logger.debug("Inference worker exception: %s", exc)
+
+        import threading
+        self._inference_worker_thread = threading.Thread(target=_inference_loop, name="orchestrator-ml-inference", daemon=True)
+        self._inference_worker_thread.start()
+
         try:
+            dropped_frames = 0
             while self._is_running:
                 ret, frame, timestamp_ms = self.source.read()
                 if not ret:
+                    if not getattr(self.source, "_is_file", False):
+                        dropped_frames += 1
+                        if dropped_frames < 30:
+                            time.sleep(0.02)
+                            continue
                     logger.info("End of video stream")
                     break
+                dropped_frames = 0
 
                 if max_frames is not None and self._frame_id >= max_frames:
                     logger.info(f"Reached max frames: {max_frames}")
                     break
 
-                # Process frame
-                frame_output, viz_data = self.process_frame(frame, timestamp_ms)
+                # Dual-rate architecture:
+                # 1. Update latest raw frame for background ML inference worker
+                with self._inference_lock:
+                    self._latest_inference_frame = frame.copy()
+                    self._latest_inference_ts = timestamp_ms
+                    self._inference_event.set()
 
-                # Write output
-                self.json_writer.write_frame(frame_output)
-
-                # Visualize
+                # 2. Render visualization immediately with latest cached telemetry
                 if visualize and self.config.visualization.enabled:
                     from facial_cues.visualization.visualizer import Visualizer
-                    viz_frame = Visualizer.draw(frame, viz_data, self.config.visualization)
+                    with self._viz_lock:
+                        current_viz_data = dict(self._last_viz_data)
+                    viz_frame = Visualizer.draw(frame, current_viz_data, self.config.visualization)
                     fps_val = self._fps_counter.update()
                     self._last_fps = fps_val
-                    self._last_viz_data = viz_data
+
                     if self.config.visualization.show_fps:
                         cv2.putText(
                             viz_frame,
@@ -255,8 +301,8 @@ class PipelineOrchestrator:
                             (0, 255, 0),
                             2,
                         )
-                    
-                    # Deception stays on screen. Emotion is drawn only when it is confident.
+
+                    # Display cached deception and emotion overlays
                     if self._last_deception_text:
                         color = (0, 255, 255)
                         if self._last_deception_text.startswith("LIE"):
@@ -376,6 +422,10 @@ class PipelineOrchestrator:
             tracked = self.tracker.update(det_bboxes)
             face_mesh_map = {}
 
+        if not tracked:
+            self._last_emotion_text = ""
+            self._last_emotion_time = 0.0
+
         # 5. Per-face processing
         faces_output = []
         viz_faces = []
@@ -451,25 +501,38 @@ class PipelineOrchestrator:
                     }
                     all_events.append(event_dict)
 
-            # 5f. Emotion from the face crop (CNN). The AU LSTM is not shown:
-            # it stays on disgust at low confidence for a resting webcam face.
-            if self.affectnet is not None and self._frame_id % 5 == 0 and bbox is not None:
-                label, conf = self.affectnet.predict(frame, bbox)
-                if label == "unknown" or (label != "neutral" and conf < 0.35):
-                    self._last_emotion_text = "NEUTRAL"
-                else:
-                    shown = "SAD" if label == "sadness" else label.upper()
-                    self._last_emotion_text = f"{shown} ({conf:.2f})"
-                logger.info("[emotion] %s", self._last_emotion_text)
-            elif self.emotion_cnn is not None and self._frame_id % 5 == 0 and bbox is not None:
-                label, conf = self.emotion_cnn.predict_emotion(frame, bbox)
-                label, conf = _correct_open_mouth_happy(label, conf, au_intensities)
-                if label == "unknown" or conf < 0.45:
-                    self._last_emotion_text = "NEUTRAL"
-                else:
-                    shown = "SAD" if label == "sadness" else label.upper()
-                    self._last_emotion_text = f"{shown} ({conf:.2f})"
-                logger.info("[emotion] %s", self._last_emotion_text)
+            # 5f. Emotion from the face crop (AffectNet / CNN)
+            if self.affectnet is not None and bbox is not None:
+                try:
+                    label, conf = self.affectnet.predict(frame, bbox)
+                    if label == "unknown":
+                        self._last_emotion_text = ""
+                        self._last_emotion_time = 0.0
+                    else:
+                        shown = "SAD" if label == "sadness" else label.upper()
+                        self._last_emotion_text = f"{shown} ({conf:.2f})"
+                        self._last_emotion_time = time.time()
+                        logger.info("[emotion] %s", self._last_emotion_text)
+                except Exception as exc:
+                    logger.debug("AffectNet predict error: %s", exc)
+                    self._last_emotion_text = ""
+                    self._last_emotion_time = 0.0
+            elif self.emotion_cnn is not None and bbox is not None:
+                try:
+                    label, conf = self.emotion_cnn.predict_emotion(frame, bbox)
+                    label, conf = _correct_open_mouth_happy(label, conf, au_intensities)
+                    if label == "unknown":
+                        self._last_emotion_text = ""
+                        self._last_emotion_time = 0.0
+                    else:
+                        shown = "SAD" if label == "sadness" else label.upper()
+                        self._last_emotion_text = f"{shown} ({conf:.2f})"
+                        self._last_emotion_time = time.time()
+                        logger.info("[emotion] %s", self._last_emotion_text)
+                except Exception as exc:
+                    logger.debug("Emotion CNN predict error: %s", exc)
+                    self._last_emotion_text = ""
+                    self._last_emotion_time = 0.0
 
             deception_dict = self._update_deception(
                 face_id, au_intensities, gaze_dict, head_pose_dict, landmarks_2d, all_events,
@@ -541,11 +604,14 @@ class PipelineOrchestrator:
             features = buf.features(fps)
             label, p_lie = self.deception_classifier.predict(features)
             reasons = self.deception_classifier.explain(features)
+            now_ts = time.time()
+            self._last_prediction_time = now_ts
             verdict = {
                 "label": label,
                 "p_lie": p_lie,
                 "window_frames": cfg.window_frames,
                 "reasons": reasons,
+                "timestamp": now_ts,
             }
             self._last_deception[face_id] = verdict
             if label == "untrained":
@@ -559,8 +625,8 @@ class PipelineOrchestrator:
             logger.info("[deception] face %s %s | %s", face_id, text, "; ".join(reasons))
             self._last_deception_text = text
             self._last_deception_reasons = reasons
-            self._last_prediction_time = time.time()
         return self._last_deception.get(face_id)
+
 
     def _match_meshes_to_tracks(
         self,
@@ -629,6 +695,13 @@ class PipelineOrchestrator:
     def shutdown(self):
         """Clean up all resources."""
         self._is_running = False
+        if hasattr(self, '_inference_event') and self._inference_event is not None:
+            self._inference_event.set()
+        if hasattr(self, '_inference_worker_thread') and self._inference_worker_thread is not None:
+            try:
+                self._inference_worker_thread.join(timeout=1.0)
+            except Exception:
+                pass
         self.json_writer.finalize()
         self.source.release()
         if self.detector is not None:

@@ -9,7 +9,16 @@ echo ============================================================
 
 echo.
 echo [1/2] Installing Gateway and Face Analysis dependencies...
-python -m pip install -r requirements.txt
+if not defined TRUSIGHT_PYTHON (
+    if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" (
+        set "TRUSIGHT_PYTHON=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
+    )
+)
+if defined TRUSIGHT_PYTHON (
+    "%TRUSIGHT_PYTHON%" -m pip install -r requirements.txt
+) else (
+    python -m pip install -r requirements.txt
+)
 
 echo.
 echo [2/2] Setting up Voice Service dedicated environment...

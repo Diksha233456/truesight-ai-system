@@ -12,10 +12,10 @@ SCORE_TYPE = (
 def predict(retrieved_chunks, interview):
     if not interview:
         return {"verdict": "No Statement", "confidence": 0, "deception_score": 0,
-                "evidence_results": [], "score_type": SCORE_TYPE}
+                "inconsistency_index": 0.0, "evidence_results": [], "score_type": SCORE_TYPE}
     if not retrieved_chunks:
         return {"verdict": "No Evidence", "confidence": 0, "deception_score": 0,
-                "evidence_results": [], "score_type": "Insufficient retrieved evidence to calculate an inconsistency score."}
+                "inconsistency_index": 0.0, "evidence_results": [], "score_type": "Insufficient retrieved evidence to calculate an inconsistency score."}
 
     evidence_results = []
     for chunk in retrieved_chunks:
@@ -66,6 +66,10 @@ CASE REPORT EXCERPT (page {chunk.get('page')}):
     else:
         verdict = "No Clear Inconsistency"
 
+    raw_deception_score = max(0, min(100, score))
+    inconsistency_index = round(raw_deception_score / 100.0, 4)
+
     return {"verdict": verdict, "confidence": strongest["confidence"],
-            "deception_score": max(0, min(100, score)),
+            "deception_score": raw_deception_score,
+            "inconsistency_index": inconsistency_index,
             "evidence_results": evidence_results, "score_type": SCORE_TYPE}

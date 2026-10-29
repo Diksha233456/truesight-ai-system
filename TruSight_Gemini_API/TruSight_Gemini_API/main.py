@@ -1471,9 +1471,11 @@ async def audio_stream(websocket: WebSocket, case_id: str):
                         await websocket.send_json({
                             "status": "success",
                             "evidence": evidence_items,
+                            "evidence_results": result.get("evidence_results", []),
                             "verdict": result.get("verdict", "Unknown"),
                             "confidence": result.get("confidence", 0),
                             "deception_score": result.get("deception_score", 0),
+                            "inconsistency_index": result.get("inconsistency_index", round(result.get("deception_score", 0) / 100.0, 4)),
                             "score_type": result.get(
                                 "score_type",
                                 "Estimated inconsistency score based on explicit contradictions; not a probability of deception.",

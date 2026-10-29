@@ -101,9 +101,19 @@ class GeminiAnalysisModule {
         body: formData,
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        data = { detail: `HTTP ${res.status}: Server returned an invalid response.` };
+      }
+
       if (!res.ok) {
-        throw new Error(data.detail || 'Failed to index case report.');
+        throw new Error(data.detail || `Server returned error HTTP ${res.status}.`);
+      }
+
+      if (!data.case_id) {
+        throw new Error('Server response missing valid case ID.');
       }
 
       this.caseId = data.case_id;
@@ -128,13 +138,20 @@ class GeminiAnalysisModule {
       }
     } catch (err) {
       console.error('Case upload error:', err);
+      const isNetworkErr = err.name === 'TypeError' || err.message === 'Failed to fetch';
+      const displayMsg = isNetworkErr
+        ? 'Could not reach TRUSIGHT server. Verify the Gateway is online.'
+        : err.message;
       if (this.caseStatus) {
-        this.caseStatus.textContent = `❌ ${err.message}`;
+        this.caseStatus.textContent = `❌ ${displayMsg}`;
         this.caseStatus.className = 'gemini-status-text error';
       }
       if (this.micStatus) {
         this.micStatus.textContent = 'Case indexing failed. Check server console.';
         this.micStatus.className = 'gemini-status-text error';
+      }
+      if (this.btnStart) {
+        this.btnStart.disabled = true;
       }
     } finally {
       if (this.btnUploadCase) this.btnUploadCase.disabled = false;
@@ -280,40 +297,65 @@ class GeminiAnalysisModule {
       const v = data.verdict || 'Unknown';
       this.state.verdict = v;
       this.state.rawScore = Number(data.deception_score) || 0;
-      this.state.deceptionScore = Math.max(0, Math.min(1, this.state.rawScore / 100.0));
+      if (data.inconsistency_index !== undefined && data.inconsistency_index !== null) {
+        this.state.deceptionScore = Math.max(0, Math.min(1, Number(data.inconsistency_index)));
+      } else {
+        this.state.deceptionScore = Math.max(0, Math.min(1, this.state.rawScore / 100.0));
+      }
       this.state.confidence = data.confidence !== undefined ? data.confidence : null;
       this.state.scoreType = data.score_type || '';
+      this.state.timestamp = (data.timestamp ? parseFloat(data.timestamp) : Date.now() / 1000.0);
       this.state.explanation = data.explanation || null;
       this.state.evidence = data.evidence || [];
+      this.state.evidenceResults = data.evidence_results || data.evidence || [];
 
       // Update UI badges
       if (this.verdictBadge) {
-        this.verdictBadge.textContent = v.toUpperCase();
-        this.verdictBadge.className = 'metric-badge ' + (
-          v.toLowerCase().includes('truth') || v.toLowerCase().includes('consistent') ? 'truth' :
-          v.toLowerCase().includes('lie') || v.toLowerCase().includes('decept') || v.toLowerCase().includes('contradict') ? 'lie' : 'uncertain'
-        );
+        const lowerV = v.toLowerCase();
+        let displayBadge = v.toUpperCase();
+        let badgeClass = 'uncertain';
+
+        if (lowerV.includes('consistent') || lowerV.includes('entailment') || lowerV.includes('supported')) {
+          displayBadge = 'SUPPORTED';
+          badgeClass = 'truth';
+        } else if (lowerV.includes('inconsistency') || lowerV.includes('contradict')) {
+          displayBadge = 'CONTRADICTED';
+          badgeClass = 'lie';
+        } else if (lowerV.includes('mixed')) {
+          displayBadge = 'MIXED';
+          badgeClass = 'uncertain';
+        } else if (lowerV.includes('no statement')) {
+          displayBadge = 'NO STATEMENT';
+          badgeClass = 'uncertain';
+        } else if (lowerV.includes('no evidence') || lowerV.includes('insufficient')) {
+          displayBadge = 'INSUFFICIENT EVIDENCE';
+          badgeClass = 'uncertain';
+        }
+
+        this.verdictBadge.textContent = displayBadge;
+        this.verdictBadge.className = 'metric-badge ' + badgeClass;
       }
 
       if (this.scoreVal) {
-        this.scoreVal.textContent = `${Math.round(this.state.rawScore)}/100`;
+        this.scoreVal.textContent = `Index: ${this.state.deceptionScore.toFixed(2)}`;
       }
       if (this.scoreFill) {
-        this.scoreFill.style.width = `${Math.round(this.state.rawScore)}%`;
+        this.scoreFill.style.width = `${Math.round(this.state.deceptionScore * 100)}%`;
         this.scoreFill.className = 'meter-fill ' + (
-          this.state.rawScore > 60 ? 'lie' : this.state.rawScore < 40 ? 'truth' : 'uncertain'
+          this.state.deceptionScore >= 0.5 ? 'lie' : this.state.deceptionScore > 0 ? 'truth' : 'uncertain'
         );
       }
       if (this.confidenceVal && this.state.confidence !== null) {
-        this.confidenceVal.textContent = `Confidence: ${this.state.confidence}%`;
+        this.confidenceVal.textContent = `Confidence: ${Math.round(this.state.confidence)}%`;
       }
 
-      // Update Evidence box
+      // Update Evidence box with structured source/page references
       if (this.evidenceBox && data.evidence) {
         if (Array.isArray(data.evidence) && data.evidence.length > 0) {
           this.evidenceBox.innerHTML = data.evidence.map((item, idx) => {
+            const page = item.page !== undefined && item.page !== null ? `Page ${item.page}` : 'Doc Source';
             const txt = typeof item === 'string' ? item : (item.text || item.chunk || JSON.stringify(item));
-            return `<div class="gemini-evidence-item"><span class="evidence-tag">REF #${idx+1}</span> ${txt}</div>`;
+            return `<div class="gemini-evidence-item"><span class="evidence-tag">REF #${idx + 1} • ${escapeHtml(page)}</span> ${escapeHtml(txt)}</div>`;
           }).join('');
         } else {
           this.evidenceBox.textContent = 'No contradicting evidence retrieved.';
@@ -419,9 +461,9 @@ class GeminiAnalysisModule {
             </span>
           </div>
           <div style="font-size:11px;color:var(--text-secondary);margin-top:4px;line-height:1.4;">
-            ${isConsistent 
-              ? 'The spoken statement aligns with the factual baseline documented in the indexed case report.' 
-              : 'The excerpt neither directly confirms nor explicitly refutes the statement (insufficient counter-evidence).'}
+            ${isConsistent
+          ? 'The spoken statement aligns with the factual baseline documented in the indexed case report.'
+          : 'The excerpt neither directly confirms nor explicitly refutes the statement (insufficient counter-evidence).'}
           </div>
         </div>
       `;
@@ -435,7 +477,7 @@ class GeminiAnalysisModule {
     this.recording = false;
     this.cleanupAudio();
     if (this.socket) {
-      try { this.socket.close(); } catch (e) {}
+      try { this.socket.close(); } catch (e) { }
       this.socket = null;
     }
     if (this.micStatus) {
@@ -448,19 +490,19 @@ class GeminiAnalysisModule {
 
   cleanupAudio() {
     if (this.audioProcessor) {
-      try { this.audioProcessor.disconnect(); } catch (e) {}
+      try { this.audioProcessor.disconnect(); } catch (e) { }
       this.audioProcessor = null;
     }
     if (this.audioSource) {
-      try { this.audioSource.disconnect(); } catch (e) {}
+      try { this.audioSource.disconnect(); } catch (e) { }
       this.audioSource = null;
     }
     if (this.silentGain) {
-      try { this.silentGain.disconnect(); } catch (e) {}
+      try { this.silentGain.disconnect(); } catch (e) { }
       this.silentGain = null;
     }
     if (this.audioContext) {
-      try { this.audioContext.close(); } catch (e) {}
+      try { this.audioContext.close(); } catch (e) { }
       this.audioContext = null;
     }
     if (this.stream) {
@@ -475,10 +517,12 @@ class GeminiAnalysisModule {
       caseLoaded: this.state.caseLoaded,
       verdict: this.state.verdict,
       deceptionScore: this.state.deceptionScore,
+      inconsistencyIndex: this.state.deceptionScore,
       rawScore: this.state.rawScore,
       confidence: this.state.confidence,
       transcript: this.state.transcript,
       evidence: this.state.evidence,
+      evidenceResults: this.state.evidenceResults || this.state.evidence || [],
       explanation: this.state.explanation,
     };
   }
@@ -491,6 +535,7 @@ class GeminiAnalysisModule {
     this.state.rawScore = null;
     this.state.confidence = null;
     this.state.evidence = [];
+    this.state.evidenceResults = [];
     this.state.explanation = null;
 
     if (this.transcriptBox) this.transcriptBox.textContent = 'Waiting for speech...';

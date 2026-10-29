@@ -523,7 +523,7 @@ async def live_analyze_segment(
                     f"Short silent chunk ({loaded_audio.duration_seconds:.2f}s).",
                 ],
                 "duration": round(loaded_audio.duration_seconds, 2),
-            })
+                "timestamp": _time.time(),            })
 
         # Non-silent short chunk: accumulate into rolling buffer
         rolling_audio = live_manager.append_audio_samples(loaded_audio.samples, loaded_audio.sample_rate)
@@ -544,7 +544,7 @@ async def live_analyze_segment(
                     f"Accumulated {rolling_audio.duration_seconds:.2f}s (minimum {MIN_DURATION_SECONDS:.1f}s required for feature extraction).",
                 ],
                 "duration": round(loaded_audio.duration_seconds, 2),
-            })
+                "timestamp": _time.time(),            })
         chunk_to_evaluate = rolling_audio
     else:
         chunk_to_evaluate = loaded_audio
@@ -574,7 +574,7 @@ async def live_analyze_segment(
                 chunk_note,
             ],
             "duration": round(loaded_audio.duration_seconds, 2),
-        })
+                "timestamp": _time.time(),        })
 
     # User spoke! Append chunk to rolling buffer if not already appended
     if chunk_to_evaluate is loaded_audio:
@@ -610,7 +610,7 @@ async def live_analyze_segment(
                 feat_note,
             ],
             "duration": round(loaded_audio.duration_seconds, 2),
-        })
+                "timestamp": _time.time(),        })
 
     # ── Prediction using verified feature vector ──────────────────────────
     try:
@@ -632,6 +632,7 @@ async def live_analyze_segment(
     start_seconds = _time.monotonic() - live_manager.get_session_start_time()
     end_seconds = start_seconds + loaded_audio.duration_seconds
 
+    now_wall_ts = _time.time()
     seg_result = SegmentResult(
         segment=segment_index,
         start_seconds=max(0.0, start_seconds - loaded_audio.duration_seconds),
@@ -643,6 +644,7 @@ async def live_analyze_segment(
         features=features_obj,
         speech_detected=True,
         speech_status=SPEECH_STATUS_VOICE_DETECTED,
+        timestamp=now_wall_ts,
     )
 
     live_manager.submit_segment(seg_result)
@@ -665,7 +667,9 @@ async def live_analyze_segment(
         "structured_explanation": structured_expl.dict() if structured_expl else None,
         "features": features_obj.dict() if features_obj else None,
         "duration": round(loaded_audio.duration_seconds, 2),
+        "timestamp": now_wall_ts,
     })
+
 
 
 # ============================================================================

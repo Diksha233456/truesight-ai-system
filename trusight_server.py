@@ -42,16 +42,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static") or request.url.path in ("/", "/live-assessment", "/evidence-library", "/case-reports", "/analytics", "/settings"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 @app.get("/", include_in_schema=False)
+@app.get("/live-assessment", include_in_schema=False)
+@app.get("/evidence-library", include_in_schema=False)
+@app.get("/case-reports", include_in_schema=False)
+@app.get("/analytics", include_in_schema=False)
+@app.get("/settings", include_in_schema=False)
 async def serve_index():
     index_file = STATIC_DIR / "index.html"
     if index_file.exists():
-        return FileResponse(str(index_file))
+        response = FileResponse(str(index_file))
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
     return JSONResponse(content={"service": "TRUSIGHT Unified Gateway", "status": "online"})
+
+
 
 
 @app.get("/api/health")
@@ -99,21 +120,34 @@ async def health_check():
 # ── Face Engine Endpoints ───────────────────────────────────────────────────
 
 @app.get("/api/face/video_feed")
-async def face_video_feed():
+async def face_video_feed(request: Request):
     """Proxy MJPEG stream from the Face Analysis Engine directly to the browser."""
     client = httpx.AsyncClient(timeout=None)
     try:
         req = client.build_request("GET", f"{FACE_BACKEND}/video_feed")
         res = await client.send(req, stream=True)
+        if res.status_code != 200:
+            await res.aclose()
+            await client.aclose()
+            return JSONResponse(status_code=res.status_code, content={"detail": "Face camera stream not ready"})
+
+        async def stream_with_cleanup():
+            try:
+                async for chunk in res.aiter_bytes():
+                    if await request.is_disconnected():
+                        break
+                    yield chunk
+            finally:
+                await res.aclose()
+                await client.aclose()
+
         return StreamingResponse(
-            res.aiter_bytes(),
+            stream_with_cleanup(),
             status_code=res.status_code,
             media_type=res.headers.get("content-type", "multipart/x-mixed-replace; boundary=frame"),
-            background=BackgroundTask(res.aclose),
         )
     except Exception as exc:
         await client.aclose()
-        # Fallback 1x1 transparent JPEG or error notice if camera is paused
         return JSONResponse(status_code=503, content={"detail": f"Face camera stream unavailable: {exc}"})
 
 
@@ -315,6 +349,19 @@ async def gemini_audio_websocket_proxy(websocket: WebSocket, case_id: str):
             await websocket.close(code=1011, reason=f"Gemini WebSocket proxy error: {exc}")
         except Exception:
             pass
+
+
+# ── Multimodal Assessment Coordinator ──────────────────────────────────────
+
+from assessment_coordinator import AssessmentRequest, AssessmentResponse, evaluate_assessment
+
+@app.post("/api/assessment/evaluate", response_model=AssessmentResponse)
+async def evaluate_multimodal_assessment(req: AssessmentRequest):
+    """
+    Synthesize document evidence, facial observations, and acoustic observations
+    transparently without computing an unvalidated combined deception probability.
+    """
+    return evaluate_assessment(req)
 
 
 def main():

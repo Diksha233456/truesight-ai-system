@@ -61,6 +61,7 @@ class VoiceAnalysisModule {
     this.recordedChunks = [];
     this.animFrameId = null;
     this.countdownTimer = null;
+    this.segmentTimeout = null;
     this.currentSegNum = 0;
     this.timelineChart = null;
     this.segmentsHistory = [];
@@ -68,6 +69,7 @@ class VoiceAnalysisModule {
 
     this.currentState = {
       ready: false,
+      timestamp: null,
       verdict: 'WAITING',
       deceptionScore: null,
       confidence: null,
@@ -75,7 +77,9 @@ class VoiceAnalysisModule {
       speechStatus: 'WAITING',
       observations: [],
       features: null,
+      window_seconds: this.selectedWindow,
     };
+
 
     this.initModeTabs();
     this.initDurationPills();
@@ -108,6 +112,7 @@ class VoiceAnalysisModule {
         this.pillsDuration.forEach(p => p.classList.remove('selected'));
         pill.classList.add('selected');
         this.selectedWindow = parseInt(pill.dataset.sec, 10) || 30;
+        this.currentState.window_seconds = this.selectedWindow;
       });
     });
   }
@@ -192,9 +197,9 @@ class VoiceAnalysisModule {
       this.recordHistoryEntry({
         segment: 'FILE',
         time: new Date().toLocaleTimeString(),
-        verdict: data.verdict,
-        score: data.score,
-        confidence: data.confidence,
+        verdict: data.speech_detected ? (data.verdict === 'Deceptive' ? 'Lie-class prediction' : data.verdict === 'Truthful' ? 'Truth-class prediction' : 'Inconclusive') : 'No Speech Detected',
+        score: data.speech_detected ? data.score : null,
+        confidence: data.speech_detected ? data.confidence : null,
         speech_detected: data.speech_detected,
       });
     } catch (err) {
@@ -214,12 +219,44 @@ class VoiceAnalysisModule {
       this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this.initWaveformVisualizer(this.micStream);
 
-      // Start live session on backend
-      await fetch('/api/voice/live/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ window_seconds: this.selectedWindow }),
-      }).catch(() => {});
+      // Start live session on backend with validated window
+      let startRes;
+      try {
+        startRes = await fetch('/api/voice/live/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ window_seconds: this.selectedWindow }),
+        });
+      } catch (netErr) {
+        throw new Error(`Cannot reach voice service: ${netErr.message}`);
+      }
+
+      if (!startRes.ok) {
+        if (startRes.status === 409) {
+          // Session already running on backend from previous run: cleanly stop and restart
+          await fetch('/api/voice/live/stop', { method: 'POST' }).catch(() => {});
+          const retryRes = await fetch('/api/voice/live/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ window_seconds: this.selectedWindow }),
+          });
+          if (!retryRes.ok) {
+            let detail = `HTTP ${retryRes.status}`;
+            try {
+              const j = await retryRes.json();
+              if (j && j.detail) detail = j.detail;
+            } catch (_) {}
+            throw new Error(`Voice session initialization failed: ${detail}`);
+          }
+        } else {
+          let detail = `HTTP ${startRes.status}`;
+          try {
+            const j = await startRes.json();
+            if (j && j.detail) detail = j.detail;
+          } catch (_) {}
+          throw new Error(`Voice service error (${detail})`);
+        }
+      }
 
       this.isLiveRecording = true;
       this.btnStartLive.style.display = 'none';
@@ -228,15 +265,30 @@ class VoiceAnalysisModule {
 
       this.startSegmentRecording();
     } catch (err) {
-      alert(`Microphone access error: ${err.message}. Please allow microphone permissions.`);
+      this.isLiveRecording = false;
+      if (this.micStream) {
+        this.micStream.getTracks().forEach(t => t.stop());
+        this.micStream = null;
+      }
+      this.stopWaveformVisualizer();
+      this.btnStartLive.style.display = 'inline-flex';
+      this.btnStopLive.style.display = 'none';
+      this.renderVoiceError(err.message);
+      alert(`Voice recording start error: ${err.message}`);
     }
   }
 
   startSegmentRecording() {
     if (!this.isLiveRecording || !this.micStream) return;
 
+    if (this.segmentTimeout) {
+      clearTimeout(this.segmentTimeout);
+      this.segmentTimeout = null;
+    }
+
     this.recordedChunks = [];
     this.currentSegNum++;
+    const segNum = this.currentSegNum;
 
     const mimeType = this.getSupportedMimeType();
     const options = mimeType ? { mimeType } : {};
@@ -254,29 +306,53 @@ class VoiceAnalysisModule {
     };
 
     this.mediaRecorder.onstop = async () => {
-      if (!this.isLiveRecording) return;
-
-      const blob = new Blob(this.recordedChunks, { type: mimeType || 'audio/webm' });
+      // Capture available chunks before resetting buffer
+      const chunks = this.recordedChunks;
       this.recordedChunks = [];
+      const hasChunks = chunks.length > 0 && chunks.some(c => c.size > 0);
 
-      await this.uploadLiveSegment(blob, this.currentSegNum);
-
+      // Start the next recording window immediately if live to prevent gaps
       if (this.isLiveRecording) {
         this.startSegmentRecording();
       }
+
+      try {
+        if (hasChunks) {
+          const blob = new Blob(chunks, { type: mimeType || 'audio/webm' });
+          await this.uploadLiveSegment(blob, segNum);
+        }
+      } finally {
+        if (this._stopResolve) {
+          this._stopResolve();
+          this._stopResolve = null;
+        }
+      }
     };
 
-    this.mediaRecorder.start();
+    // Buffer audio continuously every 1000ms so early-stop captures partial audio
+    try {
+      this.mediaRecorder.start(1000);
+    } catch (_) {
+      this.mediaRecorder.start();
+    }
     this.startCountdown(this.selectedWindow);
 
-    setTimeout(() => {
+    this.segmentTimeout = setTimeout(() => {
       if (this.mediaRecorder && this.mediaRecorder.state === 'recording' && this.isLiveRecording) {
-        this.mediaRecorder.stop();
+        try {
+          this.mediaRecorder.stop();
+        } catch (_) {}
       }
     }, this.selectedWindow * 1000);
   }
 
   async uploadLiveSegment(blob, segNum) {
+    if (!blob || blob.size === 0) return;
+
+    if (this.liveCountdownVal && this.isLiveRecording) {
+      this.liveCountdownVal.textContent = 'Processing...';
+    }
+
     const ext = blob.type.includes('ogg') ? 'ogg' : 'webm';
     const formData = new FormData();
     formData.append('audio', blob, `live_segment_${segNum}.${ext}`);
@@ -287,28 +363,69 @@ class VoiceAnalysisModule {
         body: formData,
       });
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        let errMessage = `HTTP ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.detail) {
+            errMessage = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
+          }
+        } catch (_) {}
+        this.renderVoiceError(errMessage, res.status);
+        return;
+      }
+
       const data = await res.json();
       this.renderVoiceResult(data);
 
       this.recordHistoryEntry({
         segment: `#${segNum}`,
         time: new Date().toLocaleTimeString(),
-        verdict: data.verdict,
-        score: data.score,
-        confidence: data.confidence,
+        verdict: data.speech_detected ? (data.verdict === 'Deceptive' ? 'Lie-class prediction' : data.verdict === 'Truthful' ? 'Truth-class prediction' : 'Inconclusive') : 'No Speech Detected',
+        score: data.speech_detected ? data.score : null,
+        confidence: data.speech_detected ? data.confidence : null,
         speech_detected: data.speech_detected,
       });
     } catch (err) {
       console.warn('Live segment upload failed:', err);
+      this.renderVoiceError(err.message || 'Network error connecting to voice service');
     }
   }
 
-  stopLiveSession() {
+  async stopLiveSession() {
     this.isLiveRecording = false;
 
+    if (this.segmentTimeout) {
+      clearTimeout(this.segmentTimeout);
+      this.segmentTimeout = null;
+    }
+
+    if (this.countdownTimer) {
+      clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
+
+    if (this.liveCountdownVal) {
+      this.liveCountdownVal.textContent = 'Stopping...';
+    }
+
+    // Stop recorder safely; await onstop and final chunk upload before signaling backend stop
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      try { this.mediaRecorder.stop(); } catch (e) {}
+      try {
+        const stopPromise = new Promise(resolve => {
+          this._stopResolve = resolve;
+        });
+        if (this.mediaRecorder.state === 'recording') {
+          this.mediaRecorder.requestData();
+        }
+        this.mediaRecorder.stop();
+        await Promise.race([
+          stopPromise,
+          new Promise(r => setTimeout(r, 8000)),
+        ]);
+      } catch (e) {
+        console.warn('Error during mediaRecorder stop:', e);
+      }
     }
 
     if (this.micStream) {
@@ -318,11 +435,6 @@ class VoiceAnalysisModule {
 
     this.stopWaveformVisualizer();
 
-    if (this.countdownTimer) {
-      clearInterval(this.countdownTimer);
-      this.countdownTimer = null;
-    }
-
     if (this.liveCountdownVal) {
       this.liveCountdownVal.textContent = 'Stopped';
     }
@@ -330,7 +442,49 @@ class VoiceAnalysisModule {
     this.btnStartLive.style.display = 'inline-flex';
     this.btnStopLive.style.display = 'none';
 
-    fetch('/api/voice/live/stop', { method: 'POST' }).catch(() => {});
+    await fetch('/api/voice/live/stop', { method: 'POST' }).catch(() => {});
+  }
+
+  renderVoiceError(errMessage, statusCode = null) {
+    this.currentState.ready = false;
+    this.currentState.timestamp = null;
+    this.currentState.speechDetected = false;
+    this.currentState.speechStatus = 'ERROR';
+    this.currentState.verdict = 'ANALYSIS ERROR';
+
+    const statusPrefix = statusCode ? `[HTTP ${statusCode}] ` : '';
+    const safeMsg = errMessage ? String(errMessage).replace(/<[^>]+>/g, '') : 'Analysis error';
+
+    if (this.verdictPill) {
+      this.verdictPill.textContent = 'ANALYSIS ERROR';
+      this.verdictPill.className = 'metric-badge uncertain';
+    }
+
+    if (this.speechStatusBadge) {
+      this.speechStatusBadge.textContent = 'ERROR';
+      this.speechStatusBadge.className = 'metric-badge uncertain';
+    }
+
+    if (this.deceptionScoreVal) {
+      this.deceptionScoreVal.textContent = '—';
+    }
+    if (this.deceptionGauge) {
+      this.deceptionGauge.style.strokeDashoffset = '188.5';
+    }
+    if (this.confidenceVal) {
+      this.confidenceVal.textContent = '—';
+    }
+    if (this.confidenceFill) {
+      this.confidenceFill.style.width = '0%';
+    }
+
+    if (this.liveCountdownVal) {
+      this.liveCountdownVal.textContent = 'Error';
+    }
+
+    if (this.structuredObsList) {
+      this.structuredObsList.innerHTML = `<li class="structured-obs-item" style="color:var(--status-uncertain);">${statusPrefix}${safeMsg}</li>`;
+    }
   }
 
   startCountdown(seconds) {
@@ -447,50 +601,109 @@ class VoiceAnalysisModule {
     if (!data) return;
 
     this.currentState.ready = true;
-    this.currentState.verdict = data.verdict || 'Inconclusive';
-    this.currentState.deceptionScore = data.score;
-    this.currentState.confidence = data.confidence;
+    const rawTs = (data.timestamp !== undefined && data.timestamp !== null) ? data.timestamp : null;
+    const numTs = (rawTs !== null && typeof rawTs === 'number' && Number.isFinite(rawTs) && rawTs > 0)
+      ? rawTs
+      : (typeof rawTs === 'string' && !isNaN(Number(rawTs)) && Number.isFinite(Number(rawTs)) && Number(rawTs) > 0)
+        ? Number(rawTs)
+        : null;
+    this.currentState.timestamp = numTs;
     this.currentState.speechDetected = Boolean(data.speech_detected);
+
     this.currentState.speechStatus = data.speech_status || '';
 
-    // 1. Verdict & Status
-    if (this.verdictPill) {
-      this.verdictPill.textContent = data.verdict;
-      this.verdictPill.className = 'overview-verdict ' + (data.verdict === 'Truthful' ? 'truth' : data.verdict === 'Deceptive' ? 'lie' : 'uncertain');
-    }
+    if (!data.speech_detected) {
+      // Condition: When speech is absent, clear current score and show "NO SPEECH DETECTED"
+      this.currentState.verdict = 'NO SPEECH DETECTED';
+      this.currentState.mappedClassLabel = 'NO SPEECH DETECTED';
+      this.currentState.deceptionScore = null;
+      this.currentState.confidence = null;
 
-    if (this.speechStatusBadge) {
-      this.speechStatusBadge.textContent = data.speech_status || (data.speech_detected ? 'VOICE DETECTED' : 'NO SPEECH DETECTED');
-      this.speechStatusBadge.className = 'metric-badge ' + (data.speech_detected ? 'truth' : 'uncertain');
-    }
+      if (this.verdictPill) {
+        this.verdictPill.textContent = 'NO SPEECH DETECTED';
+        this.verdictPill.className = 'metric-badge uncertain';
+      }
 
-    // 2. Deception Score (Strictly Renamed from Raw Model Score, Preserving Exact Numeric Value)
-    const score = data.score;
-    if (this.deceptionScoreVal) {
-      if (score !== null && score !== undefined) {
-        this.deceptionScoreVal.textContent = `${Math.round(score * 100)}%`;
-      } else {
+      if (this.speechStatusBadge) {
+        this.speechStatusBadge.textContent = 'NO SPEECH DETECTED';
+        this.speechStatusBadge.className = 'metric-badge uncertain';
+      }
+
+      if (this.deceptionScoreVal) {
         this.deceptionScoreVal.textContent = '—';
       }
-    }
 
-    if (this.deceptionGauge) {
-      if (score !== null && score !== undefined) {
-        const offset = 188.5 * (1.0 - Math.min(1.0, Math.max(0.0, score)));
-        this.deceptionGauge.style.strokeDashoffset = `${offset}`;
-        this.deceptionGauge.style.stroke = score > 0.5 ? 'var(--lie)' : 'var(--truth)';
-      } else {
+      if (this.deceptionGauge) {
         this.deceptionGauge.style.strokeDashoffset = '188.5';
       }
-    }
 
-    // 3. Model Confidence (Uncalibrated Model Score)
-    const conf = data.confidence;
-    if (this.confidenceVal) {
-      this.confidenceVal.textContent = conf !== null && conf !== undefined ? `${Math.round(conf * 100)}%` : '—';
-    }
-    if (this.confidenceFill) {
-      this.confidenceFill.style.width = conf !== null && conf !== undefined ? `${Math.round(conf * 100)}%` : '0%';
+      if (this.confidenceVal) {
+        this.confidenceVal.textContent = '—';
+      }
+      if (this.confidenceFill) {
+        this.confidenceFill.style.width = '0%';
+      }
+    } else {
+      // Speech detected: map verdict to explicit model prediction statuses
+      const score = (data.score !== null && data.score !== undefined) ? Number(data.score) : null;
+      let displayVerdict = 'INCONCLUSIVE';
+      let verdictClass = 'uncertain';
+
+      if (score !== null && score >= 0.45 && score <= 0.55) {
+        displayVerdict = 'INCONCLUSIVE';
+        verdictClass = 'uncertain';
+      } else if (data.verdict === 'Deceptive' || (score !== null && score > 0.55)) {
+        displayVerdict = 'MODEL PREDICTS LIE CLASS';
+        verdictClass = 'lie';
+      } else {
+        displayVerdict = 'MODEL PREDICTS TRUTH CLASS';
+        verdictClass = 'truth';
+      }
+
+      this.currentState.verdict = displayVerdict;
+      this.currentState.mappedClassLabel = displayVerdict;
+      this.currentState.deceptionScore = data.score;
+      this.currentState.confidence = data.confidence;
+
+      // 1. Verdict & Status
+      if (this.verdictPill) {
+        this.verdictPill.textContent = displayVerdict;
+        this.verdictPill.className = 'metric-badge ' + verdictClass;
+      }
+
+      if (this.speechStatusBadge) {
+        this.speechStatusBadge.textContent = data.speech_status || 'VOICE DETECTED';
+        this.speechStatusBadge.className = 'metric-badge truth';
+      }
+
+      // 2. Acoustic Model Score (Raw Classifier Probability P[Class 1])
+      const rawScore = data.score;
+      if (this.deceptionScoreVal) {
+        if (rawScore !== null && rawScore !== undefined) {
+          this.deceptionScoreVal.textContent = `${Number(rawScore).toFixed(2)}`;
+        } else {
+          this.deceptionScoreVal.textContent = '—';
+        }
+      }
+
+      if (this.deceptionGauge) {
+        if (rawScore !== null && rawScore !== undefined) {
+          const offset = 188.5 * (1.0 - Math.min(1.0, Math.max(0.0, rawScore)));
+          this.deceptionGauge.style.strokeDashoffset = `${offset}`;
+          this.deceptionGauge.style.stroke = rawScore > 0.5 ? 'var(--lie)' : 'var(--truth)';
+        } else {
+          this.deceptionGauge.style.strokeDashoffset = '188.5';
+        }
+      }
+
+      // 3. Model Confidence (Uncalibrated Model Score)
+      const conf = data.confidence;
+      if (this.confidenceVal) {
+        this.confidenceVal.textContent = conf !== null && conf !== undefined ? `${Math.round(conf * 100)}%` : '—';
+      }
+      if (this.confidenceFill) {
+        this.confidenceFill.style.width = conf !== null && conf !== undefined ? `${Math.round(conf * 100)}%` : '0%';
+      }
     }
 
     // 4. Acoustic Observations (Pitch, Tempo, Pauses, Stability, Intensity)
@@ -628,13 +841,14 @@ class VoiceAnalysisModule {
     if (this.historyTableBody) {
       this.historyTableBody.innerHTML = this.segmentsHistory
         .map(s => {
-          const scoreDisplay = s.score !== null && s.score !== undefined ? `${Math.round(s.score * 100)}%` : '—';
+          const scoreDisplay = s.score !== null && s.score !== undefined ? `${Number(s.score).toFixed(2)}` : '—';
           const confDisplay = s.confidence !== null && s.confidence !== undefined ? `${Math.round(s.confidence * 100)}%` : '—';
+          const badgeClass = s.verdict.includes('Truth') ? 'truth' : s.verdict.includes('Lie') ? 'lie' : 'uncertain';
           return `
             <tr>
               <td><strong>${escapeHtml(s.segment)}</strong></td>
               <td>${escapeHtml(s.time)}</td>
-              <td><span class="metric-badge ${s.verdict === 'Truthful' ? 'truth' : s.verdict === 'Deceptive' ? 'lie' : 'uncertain'}">${escapeHtml(s.verdict)}</span></td>
+              <td><span class="metric-badge ${badgeClass}">${escapeHtml(s.verdict)}</span></td>
               <td><strong>${scoreDisplay}</strong></td>
               <td>${confDisplay}</td>
               <td>${s.speech_detected ? 'Yes' : 'No'}</td>
@@ -661,7 +875,12 @@ class VoiceAnalysisModule {
   }
 
   getState() {
-    return { ...this.currentState };
+    return {
+      ...this.currentState,
+      isLiveRecording: this.isLiveRecording,
+      window_seconds: this.selectedWindow,
+      speech_detected: this.currentState.speechDetected,
+    };
   }
 }
 
