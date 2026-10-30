@@ -166,47 +166,65 @@
 
             <div class="overview-cards-row">
               <!-- Face Summary -->
-              <div class="modality-summary-card">
-                <div class="modality-summary-header">
+              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+                <div class="modality-summary-header" style="width:100%;justify-content:space-between;">
                   <span>Facial Movement</span>
                   <span class="card-tag" style="color:var(--primary-violet);">CV2/MediaPipe</span>
                 </div>
-                <div class="modality-value-row">
+                <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:8px;margin:10px 0;">
                   <span class="status-pill uncertain" id="overviewFaceVerdict">CALIBRATING</span>
-                  <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;" id="overviewFaceScore">Raw:
-                    —</span>
+                  <div class="radial-gauge-wrap" style="width:68px;height:68px;">
+                    <svg class="gauge-svg" width="68" height="68" viewBox="0 0 72 72">
+                      <circle class="gauge-bg" cx="36" cy="36" r="30" />
+                      <circle class="gauge-progress" id="overviewFaceGauge" cx="36" cy="36" r="30" style="stroke:#8b5cf6;" />
+                    </svg>
+                    <div class="gauge-value-text" id="overviewFaceScore" style="font-size:12px;">—</div>
+                  </div>
+                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">Confidence of Deception / Truth</span>
                 </div>
-                <div class="modality-desc" id="overviewFaceDesc">Awaiting facial cue baseline from live camera feed...
+                <div class="modality-desc" id="overviewFaceDesc" style="text-align:center;">Awaiting facial cue baseline from live camera feed...
                 </div>
               </div>
 
               <!-- Voice Summary -->
-              <div class="modality-summary-card">
-                <div class="modality-summary-header">
+              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+                <div class="modality-summary-header" style="width:100%;justify-content:space-between;">
                   <span>Vocal Acoustics</span>
                   <span class="card-tag" style="color:var(--primary-violet);">Parselmouth</span>
                 </div>
-                <div class="modality-value-row">
+                <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:8px;margin:10px 0;">
                   <span class="status-pill uncertain" id="overviewVoiceVerdict">STANDBY</span>
-                  <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;"
-                    id="overviewVoiceScore">Raw: —</span>
+                  <div class="radial-gauge-wrap" style="width:68px;height:68px;">
+                    <svg class="gauge-svg" width="68" height="68" viewBox="0 0 72 72">
+                      <circle class="gauge-bg" cx="36" cy="36" r="30" />
+                      <circle class="gauge-progress" id="overviewVoiceGauge" cx="36" cy="36" r="30" style="stroke:#06b6d4;" />
+                    </svg>
+                    <div class="gauge-value-text" id="overviewVoiceScore" style="font-size:12px;">—</div>
+                  </div>
+                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">Confidence of Deception / Truth</span>
                 </div>
-                <div class="modality-desc" id="overviewVoiceDesc">Record microphone audio or upload file to evaluate
+                <div class="modality-desc" id="overviewVoiceDesc" style="text-align:center;">Record microphone audio or upload file to evaluate
                   acoustic indicators...</div>
               </div>
 
               <!-- Gemini Summary -->
-              <div class="modality-summary-card">
-                <div class="modality-summary-header">
+              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+                <div class="modality-summary-header" style="width:100%;justify-content:space-between;">
                   <span>Document Evidence</span>
                   <span class="card-tag" style="color:var(--primary-violet);">Google GenAI RAG</span>
                 </div>
-                <div class="modality-value-row">
+                <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:8px;margin:10px 0;">
                   <span class="status-pill uncertain" id="overviewGeminiVerdict">STANDBY</span>
-                  <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;" id="overviewGeminiScore">No
-                    Case Loaded</span>
+                  <div class="radial-gauge-wrap" style="width:68px;height:68px;">
+                    <svg class="gauge-svg" width="68" height="68" viewBox="0 0 72 72">
+                      <circle class="gauge-bg" cx="36" cy="36" r="30" />
+                      <circle class="gauge-progress" id="overviewGeminiGauge" cx="36" cy="36" r="30" style="stroke:#f59e0b;" />
+                    </svg>
+                    <div class="gauge-value-text" id="overviewGeminiScore" style="font-size:12px;">—</div>
+                  </div>
+                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" id="overviewGeminiLabel">Inconsistency Index</span>
                 </div>
-                <div class="modality-desc" id="overviewGeminiDesc">Upload case evidence PDF and stream live speech to
+                <div class="modality-desc" id="overviewGeminiDesc" style="text-align:center;">Upload case evidence PDF and stream live speech to
                   evaluate statement consistency...</div>
               </div>
             </div>

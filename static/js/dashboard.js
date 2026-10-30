@@ -31,14 +31,17 @@ class TrusightDashboard {
     // Overview Elements
     this.overviewFaceVerdict = document.getElementById('overviewFaceVerdict');
     this.overviewFaceScore = document.getElementById('overviewFaceScore');
+    this.overviewFaceGauge = document.getElementById('overviewFaceGauge');
     this.overviewFaceDesc = document.getElementById('overviewFaceDesc');
 
     this.overviewVoiceVerdict = document.getElementById('overviewVoiceVerdict');
     this.overviewVoiceScore = document.getElementById('overviewVoiceScore');
+    this.overviewVoiceGauge = document.getElementById('overviewVoiceGauge');
     this.overviewVoiceDesc = document.getElementById('overviewVoiceDesc');
 
     this.overviewGeminiVerdict = document.getElementById('overviewGeminiVerdict');
     this.overviewGeminiScore = document.getElementById('overviewGeminiScore');
+    this.overviewGeminiGauge = document.getElementById('overviewGeminiGauge');
     this.overviewGeminiDesc = document.getElementById('overviewGeminiDesc');
 
     this.overviewCorrelationText = document.getElementById('overviewCorrelationText');
@@ -731,9 +734,14 @@ class TrusightDashboard {
     }
     if (this.overviewFaceScore) {
       if (faceState.pLie !== null && faceState.pLie !== undefined) {
-        this.overviewFaceScore.textContent = `Raw: ${Number(faceState.pLie).toFixed(3)}`;
+        this.overviewFaceScore.textContent = `${Math.round(faceState.pLie * 100)}%`;
+        if (this.overviewFaceGauge) {
+          const offset = 188.5 * (1.0 - Math.min(1.0, Math.max(0.0, faceState.pLie)));
+          this.overviewFaceGauge.style.strokeDashoffset = `${offset}`;
+        }
       } else {
         this.overviewFaceScore.textContent = '—';
+        if (this.overviewFaceGauge) this.overviewFaceGauge.style.strokeDashoffset = '188.5';
       }
     }
     if (this.overviewFaceDesc) {
@@ -766,9 +774,14 @@ class TrusightDashboard {
     }
     if (this.overviewVoiceScore) {
       if (voiceState.speechDetected && voiceState.deceptionScore !== null && voiceState.deceptionScore !== undefined) {
-        this.overviewVoiceScore.textContent = `Raw: ${Number(voiceState.deceptionScore).toFixed(3)}`;
+        this.overviewVoiceScore.textContent = `${Math.round(voiceState.deceptionScore * 100)}%`;
+        if (this.overviewVoiceGauge) {
+          const offset = 188.5 * (1.0 - Math.min(1.0, Math.max(0.0, voiceState.deceptionScore)));
+          this.overviewVoiceGauge.style.strokeDashoffset = `${offset}`;
+        }
       } else {
         this.overviewVoiceScore.textContent = '—';
+        if (this.overviewVoiceGauge) this.overviewVoiceGauge.style.strokeDashoffset = '188.5';
       }
     }
     if (this.overviewVoiceDesc) {
@@ -815,10 +828,15 @@ class TrusightDashboard {
       }
     }
     if (this.overviewGeminiScore) {
-      if (geminiState.deceptionScore !== null && geminiState.deceptionScore !== undefined && geminiState.transcript) {
-        this.overviewGeminiScore.textContent = `Index: ${Number(geminiState.deceptionScore).toFixed(2)}`;
+      if (geminiState.deceptionScore !== null && geminiState.deceptionScore !== undefined) {
+        this.overviewGeminiScore.textContent = Number(geminiState.deceptionScore).toFixed(2);
+        if (this.overviewGeminiGauge) {
+          const offset = 188.5 * (1.0 - Math.min(1.0, Math.max(0.0, geminiState.deceptionScore)));
+          this.overviewGeminiGauge.style.strokeDashoffset = `${offset}`;
+        }
       } else {
-        this.overviewGeminiScore.textContent = geminiState.caseLoaded ? 'Awaiting Speech' : 'No Case Loaded';
+        this.overviewGeminiScore.textContent = geminiState.caseLoaded ? '0.00' : '—';
+        if (this.overviewGeminiGauge) this.overviewGeminiGauge.style.strokeDashoffset = '188.5';
       }
     }
     if (this.overviewGeminiDesc) {
