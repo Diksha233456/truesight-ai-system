@@ -651,8 +651,9 @@ body {
 
 .overview-cards-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1.25fr 1fr 1fr 1fr;
   gap: 16px;
+  align-items: center;
 }
 
 .modality-summary-card {

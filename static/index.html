@@ -123,9 +123,9 @@
         </div>
 
         <div class="header-actions">
-          <button class="btn-primary" id="btnStartAll" title="Start both face and voice capture">
+          <button class="btn-primary" id="btnStartAll" title="Start assessment capture">
             <span class="material-symbols-outlined" style="font-size:18px;">play_arrow</span>
-            <span>START ALL</span>
+            <span>START</span>
           </button>
           <button class="btn-secondary" id="btnPauseAll" title="Pause live capture">
             <span class="material-symbols-outlined" style="font-size:18px;">pause</span>
@@ -388,12 +388,9 @@
                   </div>
                   <div style="display:flex;gap:8px;align-items:center;">
                     <input type="file" id="geminiPdfInput" accept=".pdf" style="font-size:11.5px;flex:1;" />
-                    <button class="btn-tactical" id="btnGeminiUploadCase" style="white-space:nowrap;">Index
-                      Case</button>
                   </div>
-                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;">
-                    <span id="geminiCaseStatus" style="color:var(--text-muted);">No case report loaded. Select a PDF to
-                      index.</span>
+                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-top:6px;">
+                    <span id="geminiCaseStatus" style="color:var(--text-muted);">No case report loaded. Select a PDF to index.</span>
                     <span id="geminiCaseInfo" style="color:var(--primary-violet);font-weight:600;"></span>
                   </div>
                 </div>
@@ -450,7 +447,7 @@
 
           </div>
 
-          <!-- Multimodal Cross-Analysis Overview Panel (Moved Below Modules) -->
+          <!-- Multimodal Cross-Analysis Overview Panel (At Bottom) -->
           <div class="cross-modal-fusion-panel" style="margin-top:20px;">
             <div class="fusion-header-row">
               <div class="fusion-title-wrap">
@@ -469,20 +466,20 @@
             </div>
 
             <div class="overview-cards-row">
-              <!-- Fusion Score Summary (Top Center) -->
-              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;grid-column:1/-1;max-width:280px;margin:0 auto;">
-                <div class="modality-summary-header" style="width:100%;justify-content:center;position:relative;">
+              <!-- Fusion Score Summary -->
+              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+                <div class="modality-summary-header" style="width:100%;justify-content:space-between;position:relative;">
                   <span>Multimodal Fusion Verdict</span>
-                  <span style="position:absolute;right:0;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" id="sessionTimer">00:00</span>
+                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" id="sessionTimer">00:00</span>
                 </div>
                 <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:8px;margin:10px 0;">
                   <span class="status-pill uncertain" id="fusionVerdictBadge">STANDBY</span>
-                  <div class="radial-gauge-wrap" style="width:80px;height:80px;">
-                    <svg class="gauge-svg" width="80" height="80" viewBox="0 0 72 72">
+                  <div class="radial-gauge-wrap" style="width:84px;height:84px;">
+                    <svg class="gauge-svg" width="84" height="84" viewBox="0 0 72 72">
                       <circle class="gauge-bg" cx="36" cy="36" r="30" />
                       <circle class="gauge-progress" id="fusionScoreGauge" cx="36" cy="36" r="30" />
                     </svg>
-                    <div class="gauge-value-text" id="fusionScoreValue" style="font-size:13px;font-weight:800;">—</div>
+                    <div class="gauge-value-text" id="fusionScoreValue" style="font-size:14px;font-weight:800;">—</div>
                   </div>
                   <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" id="fusionScoreLabel">Overall Verdict</span>
                 </div>
@@ -544,6 +541,8 @@
             </div>
 
           </div>
+
+
 
         </section>
 

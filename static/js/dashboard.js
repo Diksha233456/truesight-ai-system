@@ -1213,12 +1213,15 @@ class TrusightDashboard {
      GLOBAL CONTROLS
   ──────────────────────────────────────────────────────────────── */
   async startAll() {
-    this.logDiagnostic('[ACTION] Starting all active capture engines...');
+    this.logDiagnostic('[ACTION] Starting assessment, voice session & statement interview...');
     if (this.faceModule && !this.faceModule.isCameraRunning) {
       await this.faceModule.toggleCamera();
     }
     if (this.voiceModule && !this.voiceModule.isLiveRecording) {
       await this.voiceModule.startLiveSession();
+    }
+    if (this.geminiModule && !this.geminiModule.recording) {
+      await this.geminiModule.startInterview();
     }
   }
 
