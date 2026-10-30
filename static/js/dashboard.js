@@ -16,6 +16,7 @@ class TrusightDashboard {
     this.views = document.querySelectorAll('.trusight-view');
     this.pageBreadcrumb = document.getElementById('pageBreadcrumb');
     this.sessionTimerVal = document.getElementById('sessionTimerVal');
+    this.sessionTimer = document.getElementById('sessionTimer');
     this.systemStatusBadge = document.getElementById('systemStatusBadge');
     this.systemStatusDot = document.getElementById('systemStatusDot');
     this.systemStatusText = document.getElementById('systemStatusText');
@@ -28,8 +29,12 @@ class TrusightDashboard {
     this.voiceDot = document.getElementById('voiceDot');
     this.geminiDot = document.getElementById('geminiDot');
 
-    // Overview Elements
-    this.overviewFaceVerdict = document.getElementById('overviewFaceVerdict');
+    // Fusion Score Elements
+    this.fusionVerdictBadge = document.getElementById('fusionVerdictBadge');
+    this.fusionScoreValue = document.getElementById('fusionScoreValue');
+    this.fusionScoreGauge = document.getElementById('fusionScoreGauge');
+    this.fusionScoreLabel = document.getElementById('fusionScoreLabel');
+    this.fusionScoreDesc = document.getElementById('fusionScoreDesc');
     this.overviewFaceScore = document.getElementById('overviewFaceScore');
     this.overviewFaceGauge = document.getElementById('overviewFaceGauge');
     this.overviewFaceDesc = document.getElementById('overviewFaceDesc');
@@ -615,6 +620,8 @@ class TrusightDashboard {
     });
   }
 
+
+
   /* ────────────────────────────────────────────────────────────────
      SETTINGS CONTROLS
   ──────────────────────────────────────────────────────────────── */
@@ -651,8 +658,16 @@ class TrusightDashboard {
       this.sessionSeconds++;
       const mm = String(Math.floor(this.sessionSeconds / 60)).padStart(2, '0');
       const ss = String(this.sessionSeconds % 60).padStart(2, '0');
+      const timeStr = `${mm}:${ss}`;
       if (this.sessionTimerVal) {
-        this.sessionTimerVal.textContent = `${mm}:${ss}`;
+        this.sessionTimerVal.textContent = timeStr;
+      }
+      if (this.sessionTimer) {
+        this.sessionTimer.textContent = timeStr;
+      }
+      const voiceTimerEl = document.getElementById('voiceSessionTimer');
+      if (voiceTimerEl) {
+        voiceTimerEl.textContent = timeStr;
       }
     }, 1000);
   }
@@ -724,6 +739,99 @@ class TrusightDashboard {
     const voiceState = this.voiceModule ? this.voiceModule.getState() : {};
     const geminiState = this.geminiModule ? this.geminiModule.getState() : {};
 
+    // 0. Sync Multimodal Fusion Score Card
+    if (this.fusionScoreValue) {
+      const facePLie = (faceState.pLie !== null && faceState.pLie !== undefined) ? faceState.pLie : null;
+      const voicePLie = (voiceState.deceptionScore !== null && voiceState.deceptionScore !== undefined && voiceState.speechDetected) ? voiceState.deceptionScore : null;
+      const geminiPLie = (geminiState.deceptionScore !== null && geminiState.deceptionScore !== undefined) ? geminiState.deceptionScore : null;
+      
+      // Weighted fusion: Document Evidence 40%, Facial 30%, Vocal 30%
+      let fusionScore = null;
+      let activeModalities = 0;
+      
+      if (facePLie !== null || voicePLie !== null || geminiPLie !== null) {
+        let weightedSum = 0;
+        let totalWeight = 0;
+        
+        // Document Evidence: 40% weight
+        if (geminiPLie !== null) {
+          weightedSum += geminiPLie * 0.40;
+          totalWeight += 0.40;
+          activeModalities++;
+        }
+        
+        // Facial Movement: 30% weight
+        if (facePLie !== null) {
+          weightedSum += facePLie * 0.30;
+          totalWeight += 0.30;
+          activeModalities++;
+        }
+        
+        // Vocal Acoustics: 30% weight
+        if (voicePLie !== null) {
+          weightedSum += voicePLie * 0.30;
+          totalWeight += 0.30;
+          activeModalities++;
+        }
+        
+        // Normalize by total weight
+        if (totalWeight > 0) {
+          fusionScore = weightedSum / totalWeight;
+        }
+      }
+      
+      if (fusionScore !== null) {
+        const isLie = fusionScore >= 0.5;
+        const displayVal = isLie ? fusionScore : (1.0 - fusionScore);
+        
+        // Update fusion score display
+        this.fusionScoreValue.textContent = displayVal.toFixed(2);
+        
+        // Update verdict badge
+        if (this.fusionVerdictBadge) {
+          this.fusionVerdictBadge.textContent = isLie ? 'DECEPTIVE' : 'TRUTHFUL';
+          this.fusionVerdictBadge.className = 'status-pill ' + (isLie ? 'lie' : 'truth');
+        }
+        
+        // Update label
+        if (this.fusionScoreLabel) {
+          this.fusionScoreLabel.textContent = isLie ? 'Deception' : 'Truthfulness';
+          this.fusionScoreLabel.style.color = isLie ? 'var(--lie)' : 'var(--truth)';
+        }
+        
+        // Fill gauge
+        if (this.fusionScoreGauge) {
+          const offset = 188.5 * (1.0 - displayVal);
+          this.fusionScoreGauge.style.strokeDashoffset = `${offset}`;
+          this.fusionScoreGauge.style.stroke = isLie ? 'var(--lie)' : 'var(--truth)';
+        }
+        
+        // Update description
+        if (this.fusionScoreDesc) {
+          this.fusionScoreDesc.textContent = `${activeModalities} active stream${activeModalities > 1 ? 's' : ''} • Fusion: ${(fusionScore * 100).toFixed(0)}%`;
+        }
+        
+        console.log('[Fusion Score] facePLie:', facePLie?.toFixed(3), 'voicePLie:', voicePLie?.toFixed(3), 'geminiPLie:', geminiPLie?.toFixed(3), 'fusionScore:', fusionScore.toFixed(3), 'isLie:', isLie, 'weights: Doc40% Face30% Voice30%');
+      } else {
+        this.fusionScoreValue.textContent = '—';
+        if (this.fusionVerdictBadge) {
+          this.fusionVerdictBadge.textContent = 'STANDBY';
+          this.fusionVerdictBadge.className = 'status-pill uncertain';
+        }
+        if (this.fusionScoreLabel) {
+          this.fusionScoreLabel.textContent = 'Awaiting Data';
+          this.fusionScoreLabel.style.color = 'var(--text-muted)';
+        }
+        if (this.fusionScoreGauge) {
+          this.fusionScoreGauge.style.strokeDashoffset = '188.5';
+          this.fusionScoreGauge.style.stroke = 'var(--border-subtle)';
+        }
+        if (this.fusionScoreDesc) {
+          this.fusionScoreDesc.textContent = 'Awaiting multimodal analysis...';
+        }
+      }
+    }
+
     // 1. Sync Face Overview Card
     if (this.overviewFaceVerdict) {
       const v = faceState.verdict || 'Waiting for facial data';
@@ -733,15 +841,40 @@ class TrusightDashboard {
       );
     }
     if (this.overviewFaceScore) {
-      if (faceState.pLie !== null && faceState.pLie !== undefined) {
-        this.overviewFaceScore.textContent = `${Math.round(faceState.pLie * 100)}%`;
+      const facePLie = (faceState.pLie !== null && faceState.pLie !== undefined) ? faceState.pLie : (faceState.truthScore !== null && faceState.truthScore !== undefined ? (1.0 - faceState.truthScore) : null);
+      const faceLabelEl = document.getElementById('overviewFaceLabel');
+      if (facePLie !== null) {
+        const pLie = Math.max(0.0, Math.min(1.0, facePLie));
+        const pTruth = 1.0 - pLie;
+        const isLie = pLie >= 0.5;
+        
+        // Display the dominant probability value
+        const displayVal = isLie ? pLie : pTruth;
+        this.overviewFaceScore.textContent = displayVal.toFixed(2);
+        
+        // Update label with probability name
+        if (faceLabelEl) {
+          faceLabelEl.textContent = isLie ? 'P(Lie)' : 'P(Truth)';
+          faceLabelEl.style.color = isLie ? 'var(--lie)' : 'var(--truth)';
+        }
+        
+        // Fill gauge based on displayed probability (0.0 to 1.0)
         if (this.overviewFaceGauge) {
-          const offset = 188.5 * (1.0 - Math.min(1.0, Math.max(0.0, faceState.pLie)));
+          const offset = 188.5 * (1.0 - displayVal);
           this.overviewFaceGauge.style.strokeDashoffset = `${offset}`;
+          this.overviewFaceGauge.style.stroke = isLie ? 'var(--lie)' : 'var(--truth)';
+          console.log('[Face Gauge] pLie:', pLie.toFixed(3), 'displayVal:', displayVal.toFixed(3), 'offset:', offset.toFixed(1), 'isLie:', isLie);
         }
       } else {
         this.overviewFaceScore.textContent = '—';
-        if (this.overviewFaceGauge) this.overviewFaceGauge.style.strokeDashoffset = '188.5';
+        if (faceLabelEl) {
+          faceLabelEl.textContent = 'P(Lie) / P(Truth)';
+          faceLabelEl.style.color = 'var(--text-muted)';
+        }
+        if (this.overviewFaceGauge) {
+          this.overviewFaceGauge.style.strokeDashoffset = '188.5';
+          this.overviewFaceGauge.style.stroke = 'var(--border-subtle)';
+        }
       }
     }
     if (this.overviewFaceDesc) {
@@ -904,6 +1037,38 @@ class TrusightDashboard {
         const face = resp.facial_observation || {};
         const voice = resp.acoustic_observation || {};
         const eligibleCount = fusion.eligible_modalities_count || summary.eligible_modality_count || 0;
+
+        // 0. Update Fusion Score Gauge at Top with neural_corrected_fusion_score
+        const neuralCorrectedScore = fusion.neural_corrected_fusion_score;
+        if (this.fusionScoreValue && neuralCorrectedScore !== null && neuralCorrectedScore !== undefined) {
+          const score = Math.max(0.0, Math.min(1.0, neuralCorrectedScore));
+          const isLie = score >= 0.5;
+          const displayVal = isLie ? score : (1.0 - score);
+          
+          this.fusionScoreValue.textContent = displayVal.toFixed(2);
+          
+          if (this.fusionVerdictBadge) {
+            this.fusionVerdictBadge.textContent = isLie ? 'DECEPTIVE' : 'TRUTHFUL';
+            this.fusionVerdictBadge.className = 'status-pill ' + (isLie ? 'lie' : 'truth');
+          }
+          
+          if (this.fusionScoreLabel) {
+            this.fusionScoreLabel.textContent = isLie ? 'Deception' : 'Truthfulness';
+            this.fusionScoreLabel.style.color = isLie ? 'var(--lie)' : 'var(--truth)';
+          }
+          
+          if (this.fusionScoreGauge) {
+            const offset = 188.5 * (1.0 - displayVal);
+            this.fusionScoreGauge.style.strokeDashoffset = `${offset}`;
+            this.fusionScoreGauge.style.stroke = isLie ? 'var(--lie)' : 'var(--truth)';
+          }
+          
+          if (this.fusionScoreDesc) {
+            this.fusionScoreDesc.textContent = `${eligibleCount} active stream${eligibleCount > 1 ? 's' : ''} • Neural Score: ${(score * 100).toFixed(0)}%`;
+          }
+          
+          console.log('[Fusion Verdict Gauge] neural_corrected_fusion_score:', score.toFixed(3), 'isLie:', isLie, 'displayVal:', displayVal.toFixed(3));
+        }
 
         // 1. Narrative & Header Status
         if (this.overviewCorrelationText) {

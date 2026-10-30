@@ -146,106 +146,6 @@
       ──────────────────────────────────────────────────────────── -->
         <section class="trusight-view" id="view-live-assessment" data-view="live-assessment">
 
-          <!-- Multimodal Cross-Analysis Overview Panel -->
-          <div class="cross-modal-fusion-panel">
-            <div class="fusion-header-row">
-              <div class="fusion-title-wrap">
-                <span class="fusion-badge-indicator">MULTIMODAL FUSION</span>
-                <div>
-                  <div class="fusion-title">Cross-Analysis Forensic Overview</div>
-                  <div class="fusion-subtitle">Synchronized Independent Face, Voice &amp; Document Evidence Telemetry
-                  </div>
-                </div>
-              </div>
-              <div style="display:flex;align-items:center;gap:10px;">
-                <span class="status-pill uncertain" id="crossModalVerdictBadge">STANDBY</span>
-                <span class="card-tag" id="crossModalScoreVal" style="font-size:12px;padding:4px 10px;">Active Streams:
-                  0/3</span>
-              </div>
-            </div>
-
-            <div class="overview-cards-row">
-              <!-- Face Summary -->
-              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
-                <div class="modality-summary-header" style="width:100%;justify-content:space-between;">
-                  <span>Facial Movement</span>
-                  <span class="card-tag" style="color:var(--primary-violet);">CV2/MediaPipe</span>
-                </div>
-                <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:8px;margin:10px 0;">
-                  <span class="status-pill uncertain" id="overviewFaceVerdict">CALIBRATING</span>
-                  <div class="radial-gauge-wrap" style="width:68px;height:68px;">
-                    <svg class="gauge-svg" width="68" height="68" viewBox="0 0 72 72">
-                      <circle class="gauge-bg" cx="36" cy="36" r="30" />
-                      <circle class="gauge-progress" id="overviewFaceGauge" cx="36" cy="36" r="30" style="stroke:#8b5cf6;" />
-                    </svg>
-                    <div class="gauge-value-text" id="overviewFaceScore" style="font-size:12px;">—</div>
-                  </div>
-                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">Confidence of Deception / Truth</span>
-                </div>
-                <div class="modality-desc" id="overviewFaceDesc" style="text-align:center;">Awaiting facial cue baseline from live camera feed...
-                </div>
-              </div>
-
-              <!-- Voice Summary -->
-              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
-                <div class="modality-summary-header" style="width:100%;justify-content:space-between;">
-                  <span>Vocal Acoustics</span>
-                  <span class="card-tag" style="color:var(--primary-violet);">Parselmouth</span>
-                </div>
-                <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:8px;margin:10px 0;">
-                  <span class="status-pill uncertain" id="overviewVoiceVerdict">STANDBY</span>
-                  <div class="radial-gauge-wrap" style="width:68px;height:68px;">
-                    <svg class="gauge-svg" width="68" height="68" viewBox="0 0 72 72">
-                      <circle class="gauge-bg" cx="36" cy="36" r="30" />
-                      <circle class="gauge-progress" id="overviewVoiceGauge" cx="36" cy="36" r="30" style="stroke:#06b6d4;" />
-                    </svg>
-                    <div class="gauge-value-text" id="overviewVoiceScore" style="font-size:12px;">—</div>
-                  </div>
-                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">Confidence of Deception / Truth</span>
-                </div>
-                <div class="modality-desc" id="overviewVoiceDesc" style="text-align:center;">Record microphone audio or upload file to evaluate
-                  acoustic indicators...</div>
-              </div>
-
-              <!-- Gemini Summary -->
-              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
-                <div class="modality-summary-header" style="width:100%;justify-content:space-between;">
-                  <span>Document Evidence</span>
-                  <span class="card-tag" style="color:var(--primary-violet);">Google GenAI RAG</span>
-                </div>
-                <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:8px;margin:10px 0;">
-                  <span class="status-pill uncertain" id="overviewGeminiVerdict">STANDBY</span>
-                  <div class="radial-gauge-wrap" style="width:68px;height:68px;">
-                    <svg class="gauge-svg" width="68" height="68" viewBox="0 0 72 72">
-                      <circle class="gauge-bg" cx="36" cy="36" r="30" />
-                      <circle class="gauge-progress" id="overviewGeminiGauge" cx="36" cy="36" r="30" style="stroke:#f59e0b;" />
-                    </svg>
-                    <div class="gauge-value-text" id="overviewGeminiScore" style="font-size:12px;">—</div>
-                  </div>
-                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" id="overviewGeminiLabel">Inconsistency Index</span>
-                </div>
-                <div class="modality-desc" id="overviewGeminiDesc" style="text-align:center;">Upload case evidence PDF and stream live speech to
-                  evaluate statement consistency...</div>
-              </div>
-            </div>
-
-            <!-- Coordinator Narrative Box -->
-            <div class="coordinator-narrative-box">
-              <div class="coordinator-narrative-header">
-                <span class="coordinator-narrative-title">
-                  <span class="material-symbols-outlined" style="font-size:16px;">balance</span>
-                  Forensic Assessment &amp; Provenance Synthesis
-                </span>
-                <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">Decoupled Modality
-                  Assessment</span>
-              </div>
-              <div class="coordinator-narrative-text" id="overviewCorrelationText">
-                System initializing. Document contradiction, facial statistical classification, and acoustic
-                observations are reported as separate streams. No combined deception probability is computed.
-              </div>
-            </div>
-          </div>
-
           <!-- 3-Column Balanced Analysis Grid -->
           <div class="three-column-grid">
 
@@ -277,17 +177,7 @@
                   </div>
                 </div>
 
-                <!-- Camera Controls -->
-                <div class="webcam-controls-bar">
-                  <button class="btn-tactical" id="btnToggleCamera">
-                    <span class="material-symbols-outlined" style="font-size:16px;">videocam</span>
-                    <span>Toggle Camera</span>
-                  </button>
-                  <button class="btn-tactical" id="btnSnapshot">
-                    <span class="material-symbols-outlined" style="font-size:16px;">photo_camera</span>
-                    <span>Snapshot</span>
-                  </button>
-                </div>
+
 
                 <!-- Metric Card -->
                 <div class="metric-box">
@@ -309,20 +199,8 @@
                   </div>
                 </div>
 
-                <!-- Sentiment & Head Pose Row -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                  <div class="acoustic-chip">
-                    <span class="chip-label">Affect / Sentiment</span>
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                      <span class="chip-value" id="faceSentimentBadge">NEUTRAL</span>
-                      <span style="font-size:11px;font-family:var(--font-mono);" id="faceSentimentVal">0%</span>
-                    </div>
-                    <div class="meter-track" style="margin-top:2px;">
-                      <div class="meter-fill" id="faceSentimentFill" style="width:0%;background:var(--primary-violet);">
-                      </div>
-                    </div>
-                  </div>
-
+                <!-- Head Pose Row -->
+                <div style="margin-bottom:8px;">
                   <div class="acoustic-chip">
                     <span class="chip-label">Head Pose Angles</span>
                     <div
@@ -335,72 +213,17 @@
                   </div>
                 </div>
 
-                <!-- Action Units Intensity (FACS) -->
-                <div class="sub-card">
-                  <div class="sub-card-header">
-                    <span>Action Units (FACS)</span>
-                    <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">MediaPipe
-                      Blendshapes</span>
-                  </div>
-                  <div class="au-grid">
-                    <div class="au-item">
-                      <div class="au-label-row"><span>AU01 Inner Brow</span><span id="au01_val">0.00</span></div>
-                      <div class="au-bar-track">
-                        <div class="au-bar-fill" id="au01_fill"></div>
-                      </div>
-                    </div>
-                    <div class="au-item">
-                      <div class="au-label-row"><span>AU02 Outer Brow</span><span id="au02_val">0.00</span></div>
-                      <div class="au-bar-track">
-                        <div class="au-bar-fill" id="au02_fill"></div>
-                      </div>
-                    </div>
-                    <div class="au-item">
-                      <div class="au-label-row"><span>AU04 Brow Lower</span><span id="au04_val">0.00</span></div>
-                      <div class="au-bar-track">
-                        <div class="au-bar-fill" id="au04_fill"></div>
-                      </div>
-                    </div>
-                    <div class="au-item">
-                      <div class="au-label-row"><span>AU12 Lip Corner</span><span id="au12_val">0.00</span></div>
-                      <div class="au-bar-track">
-                        <div class="au-bar-fill" id="au12_fill"></div>
-                      </div>
-                    </div>
-                    <div class="au-item">
-                      <div class="au-label-row"><span>AU15 Lip Depressor</span><span id="au15_val">0.00</span></div>
-                      <div class="au-bar-track">
-                        <div class="au-bar-fill" id="au15_fill"></div>
-                      </div>
-                    </div>
-                    <div class="au-item">
-                      <div class="au-label-row"><span>AU25 Lips Part</span><span id="au25_val">0.00</span></div>
-                      <div class="au-bar-track">
-                        <div class="au-bar-fill" id="au25_fill"></div>
-                      </div>
-                    </div>
-                    <div class="au-item">
-                      <div class="au-label-row"><span>AU26 Jaw Drop</span><span id="au26_val">0.00</span></div>
-                      <div class="au-bar-track">
-                        <div class="au-bar-fill" id="au26_fill"></div>
-                      </div>
-                    </div>
-                    <div class="au-item">
-                      <div class="au-label-row"><span>AU45 Blink</span><span id="au45_val">0.00</span></div>
-                      <div class="au-bar-track">
-                        <div class="au-bar-fill" id="au45_fill"></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+
+
+
 
                 <!-- Deception Indicators / Reasons -->
                 <div class="sub-card">
-                  <div class="sub-card-header">
+                  <div class="sub-card-header" style="word-break:break-word;overflow-wrap:break-word;">
                     <span>Facial Deception Cues</span>
                   </div>
                   <ul class="structured-obs-list" id="faceReasonsList">
-                    <li class="structured-obs-item" style="color:var(--text-muted);">Calibrating facial cues baseline...
+                    <li class="structured-obs-item" style="color:var(--text-muted);word-break:break-word;overflow-wrap:break-word;">Calibrating facial cues baseline...
                     </li>
                   </ul>
                 </div>
@@ -431,12 +254,10 @@
 
                 <!-- Live Microphone Pane -->
                 <div class="tab-pane active" id="paneVoiceLive">
-                  <div class="live-controls-row">
-                    <div class="window-pills">
-                      <span>Window:</span>
-                      <button class="win-pill selected" data-sec="15">15s</button>
-                      <button class="win-pill" data-sec="20">20s</button>
-                      <button class="win-pill" data-sec="30">30s</button>
+                  <div class="live-controls-row" style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:12px;color:var(--text-muted);">
+                      <span>Acoustic Timer:</span>
+                      <span id="liveCountdownVal" style="font-weight:700;color:var(--primary-violet);">15s</span>
                     </div>
                     <div style="display:flex;gap:8px;">
                       <button class="btn-voice-live start" id="btnStartVoiceLive">
@@ -448,15 +269,6 @@
                         <span>Stop</span>
                       </button>
                     </div>
-                  </div>
-
-                  <!-- Spectrum Canvas -->
-                  <div class="waveform-box">
-                    <div class="waveform-header">
-                      <span>Microphone Acoustic Spectrum</span>
-                      <span id="liveCountdownVal">Ready to record</span>
-                    </div>
-                    <canvas id="waveformCanvas" width="480" height="48"></canvas>
                   </div>
                 </div>
 
@@ -537,53 +349,18 @@
 
                 <!-- Structured Observations -->
                 <div class="sub-card">
-                  <div class="sub-card-header">
+                  <div class="sub-card-header" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;word-break:break-word;overflow-wrap:break-word;">
                     <span>Measured Acoustic Observations</span>
-                    <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);">Parselmouth /
-                      Librosa</span>
+                    <span style="font-size:10px;color:var(--text-muted);font-family:var(--font-mono);white-space:nowrap;">Parselmouth / Librosa</span>
                   </div>
                   <ul class="structured-obs-list" id="structuredObsList">
-                    <li class="structured-obs-item" style="color:var(--text-muted);">Awaiting audio input for acoustic
-                      cue extraction...</li>
+                    <li class="structured-obs-item" style="color:var(--text-muted);word-break:break-word;overflow-wrap:break-word;">Awaiting audio input for acoustic cue extraction...</li>
                   </ul>
                 </div>
 
-                <!-- Timeline Chart -->
-                <div class="sub-card">
-                  <div class="sub-card-header">
-                    <span>Deception Score Timeline</span>
-                  </div>
-                  <div style="height:110px;position:relative;">
-                    <canvas id="voiceTimelineChart"></canvas>
-                  </div>
-                </div>
 
-                <!-- History Table -->
-                <div class="sub-card">
-                  <div class="sub-card-header">
-                    <span>Segment Analysis Log</span>
-                  </div>
-                  <div class="stitch-table-wrapper" style="max-height:130px;overflow-y:auto;">
-                    <table class="stitch-table">
-                      <thead>
-                        <tr>
-                          <th>Seg</th>
-                          <th>Time</th>
-                          <th>Verdict</th>
-                          <th>P(class 1)</th>
-                          <th>Confidence</th>
-                          <th>Voice</th>
-                        </tr>
-                      </thead>
-                      <tbody id="voiceHistoryTableBody">
-                        <tr>
-                          <td colspan="6" style="text-align:center;color:var(--text-muted);padding:14px;">No segments
-                            recorded yet.</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+
+
               </div>
             </div>
 
@@ -664,138 +441,108 @@
                   <div class="text-stream-box" id="geminiTranscriptBox">Waiting for speech...</div>
                 </div>
 
-                <!-- Retrieved Evidence Documents -->
-                <div class="sub-card">
-                  <div class="sub-card-header">
-                    <span>Retrieved Case Evidence Chunks</span>
-                  </div>
-                  <div style="max-height:110px;overflow-y:auto;" id="geminiEvidenceBox">
-                    <div style="font-size:11px;color:var(--text-muted);padding:4px;">Awaiting statement analysis to
-                      retrieve evidence...</div>
-                  </div>
-                </div>
 
-                <!-- Contradiction Analysis -->
-                <div class="sub-card">
-                  <div class="sub-card-header">
-                    <span>Forensic Contradiction Analysis</span>
-                  </div>
-                  <div class="text-stream-box" id="geminiExplanationBox" style="min-height:90px;max-height:160px;">
-                    No contradiction analysis generated yet. Speak to compare statements against indexed evidence.
-                  </div>
-                </div>
+
+
 
               </div>
             </div>
 
           </div>
 
-          <!-- ── PROMINENT MULTIMODAL FUSION ASSESSMENT PANEL (BENEATH MODALITIES) ── -->
-          <div class="fusion-assessment-dashboard-panel" id="multimodalFusionDashboardPanel">
-            <div class="fusion-dashboard-header">
-              <div class="fusion-dashboard-title-wrap">
-                <span class="fusion-badge-indicator">MULTIMODAL FUSION ENGINE</span>
+          <!-- Multimodal Cross-Analysis Overview Panel (Moved Below Modules) -->
+          <div class="cross-modal-fusion-panel" style="margin-top:20px;">
+            <div class="fusion-header-row">
+              <div class="fusion-title-wrap">
+                <span class="fusion-badge-indicator">MULTIMODAL FUSION</span>
                 <div>
-                  <div class="fusion-dashboard-title">Multimodal Fusion Assessment</div>
-                  <div class="fusion-dashboard-sub" id="fusionMetaTimestamp">Session: Standby • Evaluated: —</div>
+                  <div class="fusion-title">Cross-Analysis Forensic Overview</div>
+                  <div class="fusion-subtitle">Synchronized Independent Face, Voice &amp; Document Evidence Telemetry
+                  </div>
                 </div>
               </div>
-              <div class="fusion-dashboard-verdict-wrap">
-                <div class="fusion-verdict-title">Final Assessment Status</div>
-                <div class="fusion-final-status-badge uncertain" id="fusionFinalStatusBadge">ASSESSMENT UNAVAILABLE
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="status-pill uncertain" id="crossModalVerdictBadge">STANDBY</span>
+                <span class="card-tag" id="crossModalScoreVal" style="font-size:12px;padding:4px 10px;">Active Streams:
+                  0/3</span>
+              </div>
+            </div>
+
+            <div class="overview-cards-row">
+              <!-- Fusion Score Summary (Top Center) -->
+              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;grid-column:1/-1;max-width:280px;margin:0 auto;">
+                <div class="modality-summary-header" style="width:100%;justify-content:center;position:relative;">
+                  <span>Multimodal Fusion Verdict</span>
+                  <span style="position:absolute;right:0;font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" id="sessionTimer">00:00</span>
+                </div>
+                <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:8px;margin:10px 0;">
+                  <span class="status-pill uncertain" id="fusionVerdictBadge">STANDBY</span>
+                  <div class="radial-gauge-wrap" style="width:80px;height:80px;">
+                    <svg class="gauge-svg" width="80" height="80" viewBox="0 0 72 72">
+                      <circle class="gauge-bg" cx="36" cy="36" r="30" />
+                      <circle class="gauge-progress" id="fusionScoreGauge" cx="36" cy="36" r="30" />
+                    </svg>
+                    <div class="gauge-value-text" id="fusionScoreValue" style="font-size:13px;font-weight:800;">—</div>
+                  </div>
+                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" id="fusionScoreLabel">Overall Verdict</span>
+                </div>
+              </div>
+
+              <!-- Face Summary -->
+              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+                <div class="modality-summary-header" style="width:100%;justify-content:space-between;">
+                  <span>Facial Movement</span>
+                  <span class="card-tag" style="color:var(--primary-violet);">CV2/MediaPipe</span>
+                </div>
+                <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:6px;margin:10px 0;">
+                  <div class="radial-gauge-wrap" style="width:68px;height:68px;">
+                    <svg class="gauge-svg" width="68" height="68" viewBox="0 0 72 72">
+                      <circle class="gauge-bg" cx="36" cy="36" r="30" />
+                      <circle class="gauge-progress" id="overviewFaceGauge" cx="36" cy="36" r="30" />
+                    </svg>
+                    <div class="gauge-value-text" id="overviewFaceScore" style="font-size:11px;">—</div>
+                  </div>
+                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" id="overviewFaceLabel">Truth</span>
+                </div>
+              </div>
+
+              <!-- Voice Summary -->
+              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+                <div class="modality-summary-header" style="width:100%;justify-content:space-between;">
+                  <span>Vocal Acoustics</span>
+                  <span class="card-tag" style="color:var(--primary-violet);">Parselmouth</span>
+                </div>
+                <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:8px;margin:10px 0;">
+                  <div class="radial-gauge-wrap" style="width:68px;height:68px;">
+                    <svg class="gauge-svg" width="68" height="68" viewBox="0 0 72 72">
+                      <circle class="gauge-bg" cx="36" cy="36" r="30" />
+                      <circle class="gauge-progress" id="overviewVoiceGauge" cx="36" cy="36" r="30" />
+                    </svg>
+                    <div class="gauge-value-text" id="overviewVoiceScore" style="font-size:12px;">—</div>
+                  </div>
+                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">Truth</span>
+                </div>
+              </div>
+
+              <!-- Gemini Summary -->
+              <div class="modality-summary-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+                <div class="modality-summary-header" style="width:100%;justify-content:space-between;">
+                  <span>Document Evidence</span>
+                  <span class="card-tag" style="color:var(--primary-violet);">Google GenAI RAG</span>
+                </div>
+                <div class="modality-value-row" style="flex-direction:column;align-items:center;gap:8px;margin:10px 0;">
+                  <div class="radial-gauge-wrap" style="width:68px;height:68px;">
+                    <svg class="gauge-svg" width="68" height="68" viewBox="0 0 72 72">
+                      <circle class="gauge-bg" cx="36" cy="36" r="30" />
+                      <circle class="gauge-progress" id="overviewGeminiGauge" cx="36" cy="36" r="30" />
+                    </svg>
+                    <div class="gauge-value-text" id="overviewGeminiScore" style="font-size:12px;">—</div>
+                  </div>
+                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);" id="overviewGeminiLabel">Inconsistency Index</span>
                 </div>
               </div>
             </div>
 
-            <!-- Score & Modality Findings Grid -->
-            <div class="fusion-grid-metrics">
-              <!-- 1. Fusion Score (Empirical Rule) -->
-              <div class="fusion-metric-card">
-                <div class="fusion-metric-header">
-                  <span class="fusion-metric-name">Combined Fusion Score</span>
-                  <span class="card-tag" style="color:var(--text-muted);">Empirical Rule</span>
-                </div>
-                <div class="fusion-metric-body">
-                  <div class="fusion-score-num" id="fusionScoreVal">Not validated</div>
-                  <div class="fusion-score-sub" id="fusionScoreSub">
-                    No validated combined deception probability is computed. Exploratory behavioral metrics are not
-                    multiplied or averaged against document evidence.
-                  </div>
-                </div>
-              </div>
-
-              <!-- 2. Independent Modality Findings -->
-              <div class="fusion-metric-card">
-                <div class="fusion-metric-header">
-                  <span class="fusion-metric-name">Independent Modality Findings</span>
-                  <span class="card-tag" id="fusionEligibleCountBadge">Eligible: 0/3</span>
-                </div>
-                <div class="fusion-modalities-list">
-                  <div class="fusion-mod-row">
-                    <span class="fusion-mod-name">Facial Movement:</span>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                      <span class="status-pill uncertain" id="fusionFaceFindingBadge">MODEL UNAVAILABLE</span>
-                      <span class="fusion-mod-score" id="fusionFaceProbVal">P(class): —</span>
-                    </div>
-                  </div>
-                  <div class="fusion-mod-row">
-                    <span class="fusion-mod-name">Vocal Acoustics:</span>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                      <span class="status-pill uncertain" id="fusionVoiceFindingBadge">MODEL UNAVAILABLE</span>
-                      <span class="fusion-mod-score" id="fusionVoiceProbVal">P(class): —</span>
-                    </div>
-                  </div>
-                  <div class="fusion-mod-row">
-                    <span class="fusion-mod-name">Document Evidence:</span>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                      <span class="status-pill uncertain" id="fusionEvidenceFindingBadge">NO STATEMENT</span>
-                      <span class="fusion-mod-score" id="fusionEvidenceSufficiencyBadge">Sufficiency: NO
-                        STATEMENT</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- 3. Agreement & Concordance -->
-              <div class="fusion-metric-card">
-                <div class="fusion-metric-header">
-                  <span class="fusion-metric-name">Cross-Modal Concordance</span>
-                  <span class="status-pill uncertain" id="fusionConcordanceBadge">STANDBY</span>
-                </div>
-                <div class="fusion-agreement-body">
-                  <div class="fusion-agreement-text" id="fusionAgreementDetails">
-                    Awaiting active, eligible streams to compute cross-modal concordance and discordance.
-                  </div>
-                  <div class="fusion-eligible-tags" id="fusionEligibleNamesList" style="margin-top:8px;">
-                    <span class="chip-desc">Eligible: None</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Explanation & Scientific Limitations -->
-            <div class="coordinator-narrative-box" style="margin-top:16px;">
-              <div class="coordinator-narrative-header">
-                <span class="coordinator-narrative-title">
-                  <span class="material-symbols-outlined" style="font-size:16px;">gavel</span>
-                  Transparent Forensic Explanation
-                </span>
-                <span style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);"
-                  id="fusionAssessmentId">ID: STANDBY</span>
-              </div>
-              <div class="coordinator-narrative-text" id="fusionExplanationText">
-                TRUSIGHT evaluates documentary consistency as a factual baseline. Facial and vocal acoustic models
-                reflect exploratory statistical classifiers and do not prove deception.
-              </div>
-              <div
-                style="margin-top:8px;font-size:11px;color:var(--text-muted);border-top:1px dashed var(--border-subtle);padding-top:6px;"
-                id="fusionLimitationsText">
-                <strong>Limitations &amp; Boundary Conditions:</strong> Document verification establishes factual
-                conflict or support against submitted PDFs. Nonverbal behavioral cues (Action Units, pitch perturbation,
-                pauses) reflect physiological arousal, cognitive workload, or baseline variance, and cannot establish
-                dishonesty.
-              </div>
-            </div>
           </div>
 
         </section>
@@ -1255,18 +1002,7 @@
 
         </section>
 
-        <!-- ══════════════════════════════════════════════════════════════════
-           SCIENTIFIC DISCLAIMER FOOTER BAR (ON ALL VIEWS)
-      ══════════════════════════════════════════════════════════════════ -->
-        <footer class="stitch-disclaimer-footer">
-          <span class="material-symbols-outlined disclaimer-icon-shield">security_update_warning</span>
-          <div>
-            <strong>FORENSIC &amp; SCIENTIFIC RESEARCH NOTICE:</strong>
-            TRUSIGHT is an experimental multimodal investigative intelligence research suite. Voice deception scores,
-            facial cue readings, and LLM statement contradiction scores represent statistical model estimates and
-            physiological acoustic measurements. They do not constitute standalone proof of truth or deceit.
-          </div>
-        </footer>
+
 
       </div>
     </main>

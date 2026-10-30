@@ -891,7 +891,11 @@ body {
   color: var(--text-secondary);
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .text-stream-box {
@@ -1582,9 +1586,11 @@ body {
 .gauge-value-text {
   position: absolute;
   font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 10.5px;
+  font-weight: 700;
   color: var(--text-primary);
+  text-align: center;
+  width: 100%;
 }
 
 .score-meta {

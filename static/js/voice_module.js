@@ -47,9 +47,8 @@ class VoiceAnalysisModule {
     this.obsIntensityDesc = document.getElementById('obsIntensityDesc');
     this.structuredObsList = document.getElementById('structuredObsList');
 
-    // History Table & Timeline Chart
+    // History Table
     this.historyTableBody = document.getElementById('voiceHistoryTableBody');
-    this.timelineCanvas = document.getElementById('voiceTimelineChart');
 
     // State
     this.selectedWindow = 15; // default 15s window per user requirement
@@ -63,7 +62,6 @@ class VoiceAnalysisModule {
     this.countdownTimer = null;
     this.segmentTimeout = null;
     this.currentSegNum = 0;
-    this.timelineChart = null;
     this.segmentsHistory = [];
     this.selectedUploadFile = null;
 
@@ -85,7 +83,6 @@ class VoiceAnalysisModule {
     this.initDurationPills();
     this.initLiveControls();
     this.initUploadControls();
-    this.initTimelineChart();
     this.connectWebSocket();
   }
 
@@ -781,58 +778,6 @@ class VoiceAnalysisModule {
 
   /* ── Timeline Chart & History Table ────────────────────────────── */
 
-  initTimelineChart() {
-    if (!this.timelineCanvas) return;
-    try {
-      const ctx = this.timelineCanvas.getContext('2d');
-      this.timelineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [
-            {
-              label: 'Deception Score',
-              data: [],
-              borderColor: '#0EA5E9',
-              backgroundColor: 'rgba(14, 165, 233, 0.1)',
-              borderWidth: 2,
-              tension: 0.3,
-              fill: true,
-              pointBackgroundColor: '#0EA5E9',
-              pointRadius: 4,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              min: 0,
-              max: 100,
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#64748B', callback: val => `${val}%` },
-            },
-            x: {
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#64748B' },
-            },
-          },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: ctx => `Deception Score: ${ctx.parsed.y}%`,
-              },
-            },
-          },
-        },
-      });
-    } catch (e) {
-      console.warn('Timeline chart init failed:', e);
-    }
-  }
-
   recordHistoryEntry(entry) {
     this.segmentsHistory.unshift(entry);
     if (this.segmentsHistory.length > 25) this.segmentsHistory.pop();
@@ -856,21 +801,6 @@ class VoiceAnalysisModule {
           `;
         })
         .join('');
-    }
-
-    // Update Chart
-    if (this.timelineChart && entry.score !== null && entry.score !== undefined) {
-      const labels = this.timelineChart.data.labels;
-      const data = this.timelineChart.data.datasets[0].data;
-
-      labels.push(entry.segment);
-      data.push(Math.round(entry.score * 100));
-
-      if (labels.length > 15) {
-        labels.shift();
-        data.shift();
-      }
-      this.timelineChart.update();
     }
   }
 
