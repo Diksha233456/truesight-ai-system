@@ -3,7 +3,8 @@ TRUSIGHT Unified Process Launcher
 Launches and orchestrates:
 1. TRUSIGHT Voice Engine (port 8001) in its dedicated virtualenv
 2. TRUSIGHT Face Engine (port 8002) in system Python
-3. TRUSIGHT Unified Gateway (port 8000)
+3. TRUSIGHT Gemini Evidence Verification Engine (port 8003)
+4. TRUSIGHT Unified Gateway (port 8000)
 Monitors health, launches default browser, and cleanly shuts down all processes on Ctrl+C.
 """
 
@@ -31,7 +32,9 @@ if not VOICE_VENV_PY.exists():
 VOICE_PY = str(VOICE_VENV_PY)
 
 FACE_DIR = ROOT_DIR / "RealTime-Facial-Expression-Recognition" / "AU"
-GEMINI_DIR = ROOT_DIR / "Trusight_Gemini_API" / "TruSight_Gemini_API"
+GEMINI_DIR = ROOT_DIR / "TruSight_Gemini_API" / "TruSight_Gemini_API"
+if not GEMINI_DIR.exists():
+    GEMINI_DIR = ROOT_DIR / "Trusight_Gemini_API" / "TruSight_Gemini_API"
 GATEWAY_DIR = ROOT_DIR
 
 
@@ -40,17 +43,32 @@ def resolve_python() -> str:
     Resolve the Python 3.11 interpreter required by Face, Gemini, and Gateway services.
     Checks:
     1. TRUSIGHT_PYTHON environment variable
-    2. Standard Python 3.11 install location on Windows
-    3. Python launcher 'py -3.11'
+    2. Python launcher 'py -3.11'
+    3. Standard and user Python 3.11 install locations on Windows
     4. Current sys.executable if it is Python 3.11
-    Validates required dependencies (mediapipe, fitz, google.genai, cv2, torch) before returning.
+    Validates required dependencies (mediapipe, fitz, google.genai, groq, cv2, torch) before returning.
     """
     candidates = []
     if "TRUSIGHT_PYTHON" in os.environ:
         candidates.append(os.environ["TRUSIGHT_PYTHON"])
 
+    try:
+        py311_res = subprocess.run(
+            ["py", "-3.11", "-c", "import sys; print(sys.executable)"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        if py311_res.returncode == 0:
+            py311_path = py311_res.stdout.strip()
+            if py311_path and Path(py311_path).exists():
+                candidates.append(py311_path)
+    except Exception:
+        pass
+
     local_app_data = os.environ.get("LOCALAPPDATA", "")
     if local_app_data:
+        candidates.append(str(Path(local_app_data) / "Python" / "pythoncore-3.11-64" / "python.exe"))
         candidates.append(str(Path(local_app_data) / "Programs" / "Python" / "Python311" / "python.exe"))
 
     # Also check if current sys.executable is 3.11
@@ -65,13 +83,13 @@ def resolve_python() -> str:
 
     if not selected_py:
         raise RuntimeError(
-            "TRUSIGHT requires a compatible Python 3.11 environment with mediapipe, PyMuPDF, and google-genai.\n"
+            "TRUSIGHT requires a compatible Python 3.11 environment with mediapipe, PyMuPDF, groq, and google-genai.\n"
             "None of the candidate paths exist. Set the TRUSIGHT_PYTHON environment variable to your Python 3.11 executable."
         )
 
     # Preflight check: verify required imports in the selected interpreter
     preflight_script = (
-        "import cv2, mediapipe, torch, fitz, google.genai, fastapi, uvicorn;"
+        "import cv2, mediapipe, torch, fitz, google.genai, groq, fastapi, uvicorn;"
         "print('PREFLIGHT_OK')"
     )
     res = subprocess.run(
@@ -83,7 +101,7 @@ def resolve_python() -> str:
         err_msg = res.stderr.strip() or res.stdout.strip()
         raise RuntimeError(
             f"Selected Python interpreter ({selected_py}) failed preflight dependency check:\n{err_msg}\n"
-            "Please ensure mediapipe, PyMuPDF, google-genai, opencv-python, and torch are installed in this environment."
+            "Please ensure mediapipe, PyMuPDF, google-genai, groq, opencv-python, and torch are installed in this environment."
         )
 
     return selected_py
