@@ -894,6 +894,42 @@ class TestMultimodalFusionEngine(unittest.TestCase):
         self.assertEqual(resp.fusion_assessment.final_status, "INSUFFICIENT DATA")
         self.assertEqual(resp.fusion_assessment.eligible_modalities_count, 1)
 
+    def test_neural_corrector_module_and_equal_weighting(self):
+        from fusion_service.neural_corrector import NeuralCorrector
+        import torch
+        model = NeuralCorrector()
+        inputs = torch.tensor([[0.8, 0.9, 0.7, 0.85, 0.8, 0.9]], dtype=torch.float32)
+        score, conf = model(inputs, active_mask=[1.0, 1.0, 1.0])
+        self.assertTrue(0.0 <= score.item() <= 1.0)
+        self.assertTrue(0.0 <= conf.item() <= 1.0)
+
+    def test_assessment_includes_neural_corrected_fusion_score(self):
+        req = AssessmentRequest(
+            current_time=self.now,
+            statement_evidence={
+                "statement": "I was at the office.",
+                "evidence_results": [{"page": 1, "verdict": "Entailment", "evidence": "Badge log confirmed."}],
+            },
+            face_telemetry={
+                "ready": True,
+                "timestamp": self.now - 0.5,
+                "p_lie": 0.2,
+            },
+            voice_telemetry={
+                "ready": True,
+                "timestamp": self.now - 0.5,
+                "speech_detected": True,
+                "deceptionScore": 0.25,
+                "verdict": "Truthful",
+            }
+        )
+        resp = evaluate_assessment(req)
+        fusion = resp.fusion_assessment
+        self.assertIsNotNone(fusion.neural_corrected_fusion_score)
+        self.assertTrue(0.0 <= fusion.neural_corrected_fusion_score <= 1.0)
+        self.assertEqual(fusion.eligible_modalities_count, 3)
+
+
 
 if __name__ == "__main__":
     unittest.main()

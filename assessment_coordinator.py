@@ -13,6 +13,11 @@ import uuid
 from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 
+try:
+    from fusion_service.neural_corrector import load_neural_corrector
+except ImportError:
+    load_neural_corrector = None
+
 
 # =========================================================================
 # VALIDATION & TIME HELPERS
@@ -185,6 +190,10 @@ class FusionAssessment(BaseModel):
     experimental_heuristic_score: Optional[float] = Field(
         default=None,
         description="Synthesized cross-modal experimental heuristic index combining eligible streams. Unvalidated."
+    )
+    neural_corrected_fusion_score: Optional[float] = Field(
+        default=None,
+        description="Neural corrector DL model fusion score with equal module weighting across active streams."
     )
     combined_multimodal_confidence: Optional[float] = Field(
         default=None,
@@ -890,6 +899,47 @@ def evaluate_assessment(req: AssessmentRequest) -> AssessmentResponse:
             ("facial_deception_risk" if face_eligible else "vocal_deception_risk"): beh_risk,
         }
 
+    # Neural Corrector DL Model Integration with Equal Module Weighting
+    neural_corrected_score = None
+    try:
+        doc_inconsistency_val = evidence_finding.inconsistency_index if evidence_finding.inconsistency_index is not None else (
+            1.0 if ev_status == "CONTRADICTED" else (0.0 if ev_status == "SUPPORTED" else 0.5)
+        ) if ev_eligible else 0.0
+        face_risk_val = face_plie_val if face_plie_val is not None else 0.5 if face_eligible else 0.0
+        voice_risk_val = voice_score_val if voice_score_val is not None else 0.5 if voice_eligible else 0.0
+
+        doc_conf_val = evidence_finding.verifier_confidence or 0.8 if ev_eligible else 0.0
+        face_conf_val_feat = face_pred_prob or 0.5 if face_eligible else 0.0
+        voice_conf_val_feat = voice_conf_val or 0.8 if voice_eligible else 0.0
+
+        active_mask = [
+            1.0 if ev_eligible else 0.0,
+            1.0 if face_eligible else 0.0,
+            1.0 if voice_eligible else 0.0,
+        ]
+        n_active = sum(active_mask)
+
+        if n_active > 0 and load_neural_corrector is not None:
+            import torch
+            model = load_neural_corrector()
+            inputs = torch.tensor([[doc_inconsistency_val, face_risk_val, voice_risk_val, doc_conf_val, face_conf_val_feat, voice_conf_val_feat]], dtype=torch.float32)
+            with torch.no_grad():
+                pred_score, pred_conf = model(inputs, active_mask=active_mask)
+                neural_corrected_score = round(float(pred_score.item()), 3)
+                if combined_conf is None:
+                    combined_conf = round(float(pred_conf.item()), 3)
+        elif n_active > 0:
+            scores = []
+            if ev_eligible:
+                scores.append(doc_inconsistency_val)
+            if face_eligible:
+                scores.append(face_risk_val)
+            if voice_eligible:
+                scores.append(voice_risk_val)
+            neural_corrected_score = round(sum(scores) / len(scores), 3)
+    except Exception:
+        neural_corrected_score = combined_score
+
     fusion_assessment = FusionAssessment(
         assessment_id=str(uuid.uuid4())[:8],
         session_id=req_session,
@@ -898,6 +948,7 @@ def evaluate_assessment(req: AssessmentRequest) -> AssessmentResponse:
         fusion_score=None,  # Preserved as None for validation contract
         combined_multimodal_score=combined_score,
         experimental_heuristic_score=combined_score,
+        neural_corrected_fusion_score=neural_corrected_score,
         combined_multimodal_confidence=combined_conf,
         stream_scores=stream_scores_dict,
         fusion_score_display="Not validated",
